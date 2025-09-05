@@ -341,43 +341,11 @@ local function createSalonGUI()
     closeButton.Parent = mainFrame
     
     -- Add corners to buttons
-    for _, button in pairs({saveButton, loadButton, applyButton, deleteButton, renameButton, closeButton, minimizeButton}) do
+    for _, button in pairs({saveButton, loadButton, applyButton, deleteButton, renameButton, closeButton}) do
         local buttonCorner = Instance.new("UICorner")
         buttonCorner.CornerRadius = UDim.new(0, 6)
         buttonCorner.Parent = button
     end
-    
-    -- Minimize functionality
-    local isMinimized = false
-    local originalSize = mainFrame.Size
-    local minimizedSize = UDim2.new(0, 400, 0, 75)
-    
-    minimizeButton.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        
-        if isMinimized then
-            -- Minimize
-            mainFrame:TweenSize(minimizedSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-            minimizeButton.Text = "+"
-            
-            -- Hide all elements except header area
-            for _, child in pairs(mainFrame:GetChildren()) do
-                if child ~= logoFrame and child ~= headerText and child ~= headerShadow and child ~= byText and child ~= minimizeButton and child ~= closeButton and not child:IsA("UICorner") then
-                    child.Visible = false
-                end
-            end
-        else
-            -- Restore
-            mainFrame:TweenSize(originalSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-            minimizeButton.Text = "−"
-            
-            -- Show all elements
-            wait(0.3) -- Wait for tween to complete
-            for _, child in pairs(mainFrame:GetChildren()) do
-                child.Visible = true
-            end
-        end
-    end)
     
     -- Update preset list with better design
     local function updatePresetList()
@@ -453,11 +421,11 @@ local function createSalonGUI()
     -- Button Events
     saveButton.MouseButton1Click:Connect(function()
         local name = presetInput.Text
-        local acc1 = acc1Input.Text
-        local acc2 = acc2Input.Text
+        local hat = hatInput.Text
+        local face = faceInput.Text
         
         if name ~= "" then
-            if savePreset(name, acc1, acc2) then
+            if savePreset(name, hat, face) then
                 statusLabel.Text = "✅ Preset '" .. name .. "' saved!"
                 statusLabel.TextColor3 = Color3.new(0.2, 0.7, 0.2)
                 updatePresetList()
@@ -475,8 +443,8 @@ local function createSalonGUI()
         local name = presetInput.Text
         if name ~= "" and characterPresets[name] then
             local preset = characterPresets[name]
-            acc1Input.Text = preset.accessory1 or ""
-            acc2Input.Text = preset.accessory2 or ""
+            hatInput.Text = preset.hat or ""
+            faceInput.Text = preset.face or ""
             statusLabel.Text = "📂 Preset '" .. name .. "' loaded!"
             statusLabel.TextColor3 = Color3.new(0.2, 0.5, 0.8)
         else
@@ -486,14 +454,14 @@ local function createSalonGUI()
     end)
     
     applyButton.MouseButton1Click:Connect(function()
-        local acc1 = acc1Input.Text
-        local acc2 = acc2Input.Text
-        if acc1 ~= "" or acc2 ~= "" then
-            executeCommands(acc1, acc2)
+        local hat = hatInput.Text
+        local face = faceInput.Text
+        if hat ~= "" or face ~= "" then
+            executeCommands(hat, face)
             statusLabel.Text = "⚡ Commands executed!"
             statusLabel.TextColor3 = Color3.new(0.8, 0.4, 0.1)
         else
-            statusLabel.Text = "❌ Enter at least one Accessory ID!"
+            statusLabel.Text = "❌ Enter at least one ID!"
             statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
         end
     end)
@@ -591,10 +559,6 @@ local function createSalonGUI()
         end
     end)
     
-    closeButton.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
-    end)
-
     -- Initialize
     updatePresetList()
     
@@ -604,11 +568,9 @@ end
 -- Auto-execute
 print("🎭 Loading Salon de Fiesta...")
 print("✨ Created by farinoveri")
-print("📁 Presets folder: " .. salonFolder .. "/")
 print("📁 Main file: " .. presetFile)
 
 createSalonGUI()
 
 print("🚀 Salon de Fiesta loaded successfully!")
 print("💾 " .. tostring(#characterPresets) .. " presets loaded from local file")
-print("📂 Individual presets can be exported to " .. salonFolder .. "/{name}.json")
