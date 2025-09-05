@@ -1,5 +1,4 @@
--- Salon de Fiesta - Exploit Version
--- Hat & Face Save/Load System dengan Local JSON
+-- Salon de Fiesta - Exploit Version (Compact Modern UI)
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
@@ -11,35 +10,19 @@ local presetFile = "salon_de_fiesta_presets.json"
 local function loadPresetsFromFile()
     local success, result = pcall(function()
         if isfile(presetFile) then
-            local data = readfile(presetFile)
-            return HttpService:JSONDecode(data)
-        else
-            return {}
+            return HttpService:JSONDecode(readfile(presetFile))
         end
-    end)
-    
-    if success then
-        return result
-    else
-        warn("❌ Error loading presets: " .. result)
         return {}
-    end
+    end)
+    return success and result or {}
 end
 
 -- Save presets ke file
 local function savePresetsToFile(presets)
-    local success, errorMessage = pcall(function()
-        local jsonData = HttpService:JSONEncode(presets)
-        writefile(presetFile, jsonData)
+    local success = pcall(function()
+        writefile(presetFile, HttpService:JSONEncode(presets))
     end)
-    
-    if success then
-        print("✅ Presets saved to file!")
-        return true
-    else
-        warn("❌ Error saving presets: " .. errorMessage)
-        return false
-    end
+    return success
 end
 
 -- Load presets
@@ -50,31 +33,19 @@ local function executeCommands(hatId, faceId)
     spawn(function()
         if hatId and hatId ~= "" then
             wait(0.2)
-            game.Players.LocalPlayer:Chat("/hat " .. hatId)
-            print("🎩 Executed: /hat " .. hatId)
+            player:Chat("/hat " .. hatId)
         end
-        
         if faceId and faceId ~= "" then
             wait(0.4)
-            game.Players.LocalPlayer:Chat("/face " .. faceId)
-            print("😊 Executed: /face " .. faceId)
+            player:Chat("/face " .. faceId)
         end
     end)
 end
 
 -- Save preset
 local function savePreset(name, hatId, faceId)
-    characterPresets[name] = {
-        hat = hatId,
-        face = faceId,
-        created = os.time()
-    }
-    
-    if savePresetsToFile(characterPresets) then
-        return true
-    else
-        return false
-    end
+    characterPresets[name] = {hat = hatId, face = faceId, created = os.time()}
+    return savePresetsToFile(characterPresets)
 end
 
 -- Delete preset
@@ -82,9 +53,8 @@ local function deletePreset(name)
     if characterPresets[name] then
         characterPresets[name] = nil
         return savePresetsToFile(characterPresets)
-    else
-        return false
     end
+    return false
 end
 
 -- Rename preset
@@ -93,14 +63,12 @@ local function renamePreset(oldName, newName)
         characterPresets[newName] = characterPresets[oldName]
         characterPresets[oldName] = nil
         return savePresetsToFile(characterPresets)
-    else
-        return false
     end
+    return false
 end
 
--- Create GUI
+-- Create compact modern UI
 local function createSalonGUI()
-    -- Destroy existing GUI
     if player.PlayerGui:FindFirstChild("SalonDeFiestaGUI") then
         player.PlayerGui.SalonDeFiestaGUI:Destroy()
     end
@@ -110,207 +78,149 @@ local function createSalonGUI()
     screenGui.ResetOnSpawn = false
     screenGui.Parent = player.PlayerGui
     
-    -- Main Frame
+    -- Main Frame (compact, square, transparent center)
     local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 400, 0, 550)
-    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -275)
+    mainFrame.Size = UDim2.new(0, 300, 0, 400)
+    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
     mainFrame.BackgroundColor3 = Color3.new(1, 1, 1)
-    mainFrame.BackgroundTransparency = 0.05
+    mainFrame.BackgroundTransparency = 0.2
     mainFrame.BorderSizePixel = 0
     mainFrame.Parent = screenGui
     
-    -- Shadow effect
-    local shadow = Instance.new("Frame")
-    shadow.Size = UDim2.new(1, 6, 1, 6)
-    shadow.Position = UDim2.new(0, -3, 0, -3)
-    shadow.BackgroundColor3 = Color3.new(0, 0, 0)
-    shadow.BackgroundTransparency = 0.8
-    shadow.BorderSizePixel = 0
-    shadow.ZIndex = mainFrame.ZIndex - 1
-    shadow.Parent = mainFrame
-    
-    local shadowCorner = Instance.new("UICorner")
-    shadowCorner.CornerRadius = UDim.new(0, 15)
-    shadowCorner.Parent = shadow
-    
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
+    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = mainFrame
     
-    -- Header "SALON DE FIESTA"
+    -- Header
     local headerText = Instance.new("TextLabel")
-    headerText.Size = UDim2.new(1, 0, 0, 35)
-    headerText.Position = UDim2.new(0, 0, 0, 15)
+    headerText.Size = UDim2.new(1, -20, 0, 30)
+    headerText.Position = UDim2.new(0, 10, 0, 10)
     headerText.BackgroundTransparency = 1
     headerText.Text = "SALON DE FIESTA"
-    headerText.TextColor3 = Color3.new(0.1, 0.1, 0.1)
-    headerText.TextSize = 24
+    headerText.TextColor3 = Color3.new(0, 0, 0)
+    headerText.TextSize = 18
     headerText.Font = Enum.Font.GothamBold
     headerText.Parent = mainFrame
     
-    -- By text "farinoveri"
+    -- By text
     local byText = Instance.new("TextLabel")
-    byText.Size = UDim2.new(1, 0, 0, 20)
-    byText.Position = UDim2.new(0, 0, 0, 45)
+    byText.Size = UDim2.new(1, -20, 0, 15)
+    byText.Position = UDim2.new(0, 10, 0, 35)
     byText.BackgroundTransparency = 1
-    byText.Text = "farinoveri"
-    byText.TextColor3 = Color3.new(0.5, 0.5, 0.5)
-    byText.TextSize = 14
+    byText.Text = "by farinoveri"
+    byText.TextColor3 = Color3.new(0.4, 0.4, 0.4)
+    byText.TextSize = 10
     byText.Font = Enum.Font.Gotham
     byText.Parent = mainFrame
     
-    -- Hat ID Input
-    local hatLabel = Instance.new("TextLabel")
-    hatLabel.Size = UDim2.new(1, -20, 0, 20)
-    hatLabel.Position = UDim2.new(0, 10, 0, 85)
-    hatLabel.BackgroundTransparency = 1
-    hatLabel.Text = "Hat ID:"
-    hatLabel.TextColor3 = Color3.new(0, 0, 0)
-    hatLabel.TextSize = 14
-    hatLabel.Font = Enum.Font.Gotham
-    hatLabel.TextXAlignment = Enum.TextXAlignment.Left
-    hatLabel.Parent = mainFrame
-    
+    -- Hat Input
     local hatInput = Instance.new("TextBox")
     hatInput.Size = UDim2.new(1, -20, 0, 30)
-    hatInput.Position = UDim2.new(0, 10, 0, 105)
-    hatInput.BackgroundColor3 = Color3.new(0.95, 0.95, 0.95)
-    hatInput.BorderSizePixel = 1
-    hatInput.BorderColor3 = Color3.new(0.8, 0.8, 0.8)
+    hatInput.Position = UDim2.new(0, 10, 0, 60)
+    hatInput.BackgroundColor3 = Color3.new(1, 1, 1)
+    hatInput.BackgroundTransparency = 0.5
     hatInput.Text = ""
-    hatInput.PlaceholderText = "Enter Hat/Wings/Accessories ID..."
+    hatInput.PlaceholderText = "Hat ID..."
     hatInput.TextColor3 = Color3.new(0, 0, 0)
-    hatInput.TextSize = 14
+    hatInput.TextSize = 12
     hatInput.Font = Enum.Font.Gotham
     hatInput.Parent = mainFrame
+    Instance.new("UICorner", hatInput).CornerRadius = UDim.new(0, 4)
     
-    -- Face ID Input
-    local faceLabel = Instance.new("TextLabel")
-    faceLabel.Size = UDim2.new(1, -20, 0, 20)
-    faceLabel.Position = UDim2.new(0, 10, 0, 145)
-    faceLabel.BackgroundTransparency = 1
-    faceLabel.Text = "Face ID:"
-    faceLabel.TextColor3 = Color3.new(0, 0, 0)
-    faceLabel.TextSize = 14
-    faceLabel.Font = Enum.Font.Gotham
-    faceLabel.TextXAlignment = Enum.TextXAlignment.Left
-    faceLabel.Parent = mainFrame
-    
+    -- Face Input
     local faceInput = Instance.new("TextBox")
     faceInput.Size = UDim2.new(1, -20, 0, 30)
-    faceInput.Position = UDim2.new(0, 10, 0, 165)
-    faceInput.BackgroundColor3 = Color3.new(0.95, 0.95, 0.95)
-    faceInput.BorderSizePixel = 1
-    faceInput.BorderColor3 = Color3.new(0.8, 0.8, 0.8)
+    faceInput.Position = UDim2.new(0, 10, 0, 95)
+    faceInput.BackgroundColor3 = Color3.new(1, 1, 1)
+    faceInput.BackgroundTransparency = 0.5
     faceInput.Text = ""
-    faceInput.PlaceholderText = "Enter Face/Mask ID..."
+    faceInput.PlaceholderText = "Face ID..."
     faceInput.TextColor3 = Color3.new(0, 0, 0)
-    faceInput.TextSize = 14
+    faceInput.TextSize = 12
     faceInput.Font = Enum.Font.Gotham
     faceInput.Parent = mainFrame
+    Instance.new("UICorner", faceInput).CornerRadius = UDim.new(0, 4)
     
     -- Preset Name Input
-    local presetLabel = Instance.new("TextLabel")
-    presetLabel.Size = UDim2.new(1, -20, 0, 20)
-    presetLabel.Position = UDim2.new(0, 10, 0, 205)
-    presetLabel.BackgroundTransparency = 1
-    presetLabel.Text = "Preset Name:"
-    presetLabel.TextColor3 = Color3.new(0, 0, 0)
-    presetLabel.TextSize = 14
-    presetLabel.Font = Enum.Font.Gotham
-    presetLabel.TextXAlignment = Enum.TextXAlignment.Left
-    presetLabel.Parent = mainFrame
-    
     local presetInput = Instance.new("TextBox")
     presetInput.Size = UDim2.new(1, -20, 0, 30)
-    presetInput.Position = UDim2.new(0, 10, 0, 225)
-    presetInput.BackgroundColor3 = Color3.new(0.95, 0.95, 0.95)
-    presetInput.BorderSizePixel = 1
-    presetInput.BorderColor3 = Color3.new(0.8, 0.8, 0.8)
+    presetInput.Position = UDim2.new(0, 10, 0, 130)
+    presetInput.BackgroundColor3 = Color3.new(1, 1, 1)
+    presetInput.BackgroundTransparency = 0.5
     presetInput.Text = ""
-    presetInput.PlaceholderText = "Enter preset name..."
+    presetInput.PlaceholderText = "Preset Name..."
     presetInput.TextColor3 = Color3.new(0, 0, 0)
-    presetInput.TextSize = 14
+    presetInput.TextSize = 12
     presetInput.Font = Enum.Font.Gotham
     presetInput.Parent = mainFrame
+    Instance.new("UICorner", presetInput).CornerRadius = UDim.new(0, 4)
     
-    -- Buttons Row 1
+    -- Buttons
     local saveButton = Instance.new("TextButton")
-    saveButton.Size = UDim2.new(0.3, -5, 0, 35)
-    saveButton.Position = UDim2.new(0.05, 0, 0, 270)
+    saveButton.Size = UDim2.new(0.31, -5, 0, 30)
+    saveButton.Position = UDim2.new(0.05, 0, 0, 165)
     saveButton.BackgroundColor3 = Color3.new(0.2, 0.7, 0.2)
-    saveButton.BorderSizePixel = 0
     saveButton.Text = "SAVE"
     saveButton.TextColor3 = Color3.new(1, 1, 1)
-    saveButton.TextSize = 14
+    saveButton.TextSize = 12
     saveButton.Font = Enum.Font.GothamBold
     saveButton.Parent = mainFrame
+    Instance.new("UICorner", saveButton).CornerRadius = UDim.new(0, 4)
     
     local loadButton = Instance.new("TextButton")
-    loadButton.Size = UDim2.new(0.3, -5, 0, 35)
-    loadButton.Position = UDim2.new(0.35, 0, 0, 270)
+    loadButton.Size = UDim2.new(0.31, -5, 0, 30)
+    loadButton.Position = UDim2.new(0.36, 0, 0, 165)
     loadButton.BackgroundColor3 = Color3.new(0.2, 0.5, 0.8)
-    loadButton.BorderSizePixel = 0
     loadButton.Text = "LOAD"
     loadButton.TextColor3 = Color3.new(1, 1, 1)
-    loadButton.TextSize = 14
+    loadButton.TextSize = 12
     loadButton.Font = Enum.Font.GothamBold
     loadButton.Parent = mainFrame
+    Instance.new("UICorner", loadButton).CornerRadius = UDim.new(0, 4)
     
     local applyButton = Instance.new("TextButton")
-    applyButton.Size = UDim2.new(0.3, -5, 0, 35)
-    applyButton.Position = UDim2.new(0.65, 0, 0, 270)
+    applyButton.Size = UDim2.new(0.31, -5, 0, 30)
+    applyButton.Position = UDim2.new(0.67, 0, 0, 165)
     applyButton.BackgroundColor3 = Color3.new(0.8, 0.4, 0.1)
-    applyButton.BorderSizePixel = 0
     applyButton.Text = "APPLY"
     applyButton.TextColor3 = Color3.new(1, 1, 1)
-    applyButton.TextSize = 14
+    applyButton.TextSize = 12
     applyButton.Font = Enum.Font.GothamBold
     applyButton.Parent = mainFrame
+    Instance.new("UICorner", applyButton).CornerRadius = UDim.new(0, 4)
     
-    -- Buttons Row 2
     local deleteButton = Instance.new("TextButton")
-    deleteButton.Size = UDim2.new(0.48, 0, 0, 30)
-    deleteButton.Position = UDim2.new(0.05, 0, 0, 315)
+    deleteButton.Size = UDim2.new(0.48, -5, 0, 30)
+    deleteButton.Position = UDim2.new(0.05, 0, 0, 200)
     deleteButton.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
-    deleteButton.BorderSizePixel = 0
     deleteButton.Text = "DELETE"
     deleteButton.TextColor3 = Color3.new(1, 1, 1)
     deleteButton.TextSize = 12
     deleteButton.Font = Enum.Font.GothamBold
     deleteButton.Parent = mainFrame
+    Instance.new("UICorner", deleteButton).CornerRadius = UDim.new(0, 4)
     
     local renameButton = Instance.new("TextButton")
-    renameButton.Size = UDim2.new(0.48, 0, 0, 30)
-    renameButton.Position = UDim2.new(0.52, 0, 0, 315)
+    renameButton.Size = UDim2.new(0.48, -5, 0, 30)
+    renameButton.Position = UDim2.new(0.53, 0, 0, 200)
     renameButton.BackgroundColor3 = Color3.new(0.6, 0.4, 0.8)
-    renameButton.BorderSizePixel = 0
     renameButton.Text = "RENAME"
     renameButton.TextColor3 = Color3.new(1, 1, 1)
     renameButton.TextSize = 12
     renameButton.Font = Enum.Font.GothamBold
     renameButton.Parent = mainFrame
+    Instance.new("UICorner", renameButton).CornerRadius = UDim.new(0, 4)
     
     -- Preset List
-    local listLabel = Instance.new("TextLabel")
-    listLabel.Size = UDim2.new(1, -20, 0, 20)
-    listLabel.Position = UDim2.new(0, 10, 0, 355)
-    listLabel.BackgroundTransparency = 1
-    listLabel.Text = "Saved Presets:"
-    listLabel.TextColor3 = Color3.new(0, 0, 0)
-    listLabel.TextSize = 14
-    listLabel.Font = Enum.Font.Gotham
-    listLabel.TextXAlignment = Enum.TextXAlignment.Left
-    listLabel.Parent = mainFrame
-    
     local presetList = Instance.new("ScrollingFrame")
-    presetList.Size = UDim2.new(1, -20, 0, 120)
-    presetList.Position = UDim2.new(0, 10, 0, 375)
-    presetList.BackgroundColor3 = Color3.new(0.9, 0.9, 0.9)
-    presetList.BorderSizePixel = 1
-    presetList.BorderColor3 = Color3.new(0.7, 0.7, 0.7)
-    presetList.ScrollBarThickness = 8
+    presetList.Size = UDim2.new(1, -20, 0, 110)
+    presetList.Position = UDim2.new(0, 10, 0, 235)
+    presetList.BackgroundColor3 = Color3.new(1, 1, 1)
+    presetList.BackgroundTransparency = 0.5
+    presetList.BorderSizePixel = 0
+    presetList.ScrollBarThickness = 6
     presetList.Parent = mainFrame
+    Instance.new("UICorner", presetList).CornerRadius = UDim.new(0, 4)
     
     local listLayout = Instance.new("UIListLayout")
     listLayout.SortOrder = Enum.SortOrder.Name
@@ -319,35 +229,28 @@ local function createSalonGUI()
     
     -- Status Label
     local statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(1, -20, 0, 25)
-    statusLabel.Position = UDim2.new(0, 10, 0, 505)
+    statusLabel.Size = UDim2.new(1, -20, 0, 20)
+    statusLabel.Position = UDim2.new(0, 10, 0, 350)
     statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "🎭 Ready - " .. tostring(#characterPresets) .. " presets loaded"
-    statusLabel.TextColor3 = Color3.new(0.5, 0.5, 0.5)
-    statusLabel.TextSize = 12
+    statusLabel.Text = "🎭 Ready"
+    statusLabel.TextColor3 = Color3.new(0.4, 0.4, 0.4)
+    statusLabel.TextSize = 10
     statusLabel.Font = Enum.Font.Gotham
     statusLabel.Parent = mainFrame
     
     -- Close Button
     local closeButton = Instance.new("TextButton")
-    closeButton.Size = UDim2.new(0, 25, 0, 25)
-    closeButton.Position = UDim2.new(1, -35, 0, 10)
+    closeButton.Size = UDim2.new(0, 20, 0, 20)
+    closeButton.Position = UDim2.new(1, -30, 0, 10)
     closeButton.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
-    closeButton.BorderSizePixel = 0
     closeButton.Text = "×"
     closeButton.TextColor3 = Color3.new(1, 1, 1)
-    closeButton.TextSize = 16
+    closeButton.TextSize = 14
     closeButton.Font = Enum.Font.GothamBold
     closeButton.Parent = mainFrame
+    Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0, 4)
     
-    -- Add corners to buttons
-    for _, button in pairs({saveButton, loadButton, applyButton, deleteButton, renameButton, closeButton}) do
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 6)
-        buttonCorner.Parent = button
-    end
-    
-    -- Update preset list with better design
+    -- Update preset list
     local function updatePresetList()
         for _, child in pairs(presetList:GetChildren()) do
             if child:IsA("TextButton") then
@@ -359,82 +262,49 @@ local function createSalonGUI()
         for name, data in pairs(characterPresets) do
             count = count + 1
             local presetButton = Instance.new("TextButton")
-            presetButton.Size = UDim2.new(1, -15, 0, 28)
-            presetButton.BackgroundColor3 = Color3.new(0.98, 0.98, 0.98)
-            presetButton.BorderSizePixel = 0
-            presetButton.AutoButtonColor = false
+            presetButton.Size = UDim2.new(1, -10, 0, 24)
+            presetButton.BackgroundColor3 = Color3.new(1, 1, 1)
+            presetButton.BackgroundTransparency = 0.6
+            presetButton.Text = "🎭 " .. name
+            presetButton.TextColor3 = Color3.new(0, 0, 0)
+            presetButton.TextSize = 10
+            presetButton.Font = Enum.Font.GothamSemibold
+            presetButton.TextXAlignment = Enum.TextXAlignment.Left
             presetButton.Parent = presetList
+            Instance.new("UICorner", presetButton).CornerRadius = UDim.new(0, 4)
             
-            -- Preset button corner
-            local presetCorner = Instance.new("UICorner")
-            presetCorner.CornerRadius = UDim.new(0, 4)
-            presetCorner.Parent = presetButton
-            
-            -- Preset name (main text)
-            local presetName = Instance.new("TextLabel")
-            presetName.Size = UDim2.new(1, -10, 0, 14)
-            presetName.Position = UDim2.new(0, 8, 0, 2)
-            presetName.BackgroundTransparency = 1
-            presetName.Text = "🎭 " .. name
-            presetName.TextColor3 = Color3.new(0.1, 0.1, 0.1)
-            presetName.TextSize = 12
-            presetName.Font = Enum.Font.GothamSemibold
-            presetName.TextXAlignment = Enum.TextXAlignment.Left
-            presetName.Parent = presetButton
-            
-            -- Preset details (sub text)
-            local presetDetails = Instance.new("TextLabel")
-            presetDetails.Size = UDim2.new(1, -10, 0, 12)
-            presetDetails.Position = UDim2.new(0, 8, 0, 14)
-            presetDetails.BackgroundTransparency = 1
-            presetDetails.Text = "Hat: " .. (data.hat ~= "" and data.hat or "None") .. " • Face: " .. (data.face ~= "" and data.face or "None")
-            presetDetails.TextColor3 = Color3.new(0.5, 0.5, 0.5)
-            presetDetails.TextSize = 9
-            presetDetails.Font = Enum.Font.Gotham
-            presetDetails.TextXAlignment = Enum.TextXAlignment.Left
-            presetDetails.Parent = presetButton
-            
-            -- Hover effects
             presetButton.MouseEnter:Connect(function()
-                presetButton.BackgroundColor3 = Color3.new(0.9, 0.95, 1)
-                presetName.TextColor3 = Color3.new(0.2, 0.5, 0.8)
+                presetButton.BackgroundTransparency = 0.3
             end)
-            
             presetButton.MouseLeave:Connect(function()
-                presetButton.BackgroundColor3 = Color3.new(0.98, 0.98, 0.98)
-                presetName.TextColor3 = Color3.new(0.1, 0.1, 0.1)
+                presetButton.BackgroundTransparency = 0.6
             end)
-            
             presetButton.MouseButton1Click:Connect(function()
                 presetInput.Text = name
                 hatInput.Text = data.hat or ""
                 faceInput.Text = data.face or ""
-                statusLabel.Text = "📂 Selected preset: " .. name
+                statusLabel.Text = "📂 Selected: " .. name
                 statusLabel.TextColor3 = Color3.new(0.2, 0.5, 0.8)
             end)
         end
         
-        statusLabel.Text = "🎭 " .. count .. " presets loaded"
-        statusLabel.TextColor3 = Color3.new(0.5, 0.5, 0.5)
+        statusLabel.Text = "🎭 " .. count .. " presets"
     end
     
     -- Button Events
     saveButton.MouseButton1Click:Connect(function()
-        local name = presetInput.Text
-        local hat = hatInput.Text
-        local face = faceInput.Text
-        
+        local name, hat, face = presetInput.Text, hatInput.Text, faceInput.Text
         if name ~= "" then
             if savePreset(name, hat, face) then
-                statusLabel.Text = "✅ Preset '" .. name .. "' saved!"
+                statusLabel.Text = "✅ Saved: " .. name
                 statusLabel.TextColor3 = Color3.new(0.2, 0.7, 0.2)
                 updatePresetList()
             else
-                statusLabel.Text = "❌ Failed to save preset!"
+                statusLabel.Text = "❌ Save failed"
                 statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
             end
         else
-            statusLabel.Text = "❌ Enter preset name!"
+            statusLabel.Text = "❌ Name required"
             statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
         end
     end)
@@ -445,23 +315,22 @@ local function createSalonGUI()
             local preset = characterPresets[name]
             hatInput.Text = preset.hat or ""
             faceInput.Text = preset.face or ""
-            statusLabel.Text = "📂 Preset '" .. name .. "' loaded!"
+            statusLabel.Text = "📂 Loaded: " .. name
             statusLabel.TextColor3 = Color3.new(0.2, 0.5, 0.8)
         else
-            statusLabel.Text = "❌ Preset not found!"
+            statusLabel.Text = "❌ Preset not found"
             statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
         end
     end)
     
     applyButton.MouseButton1Click:Connect(function()
-        local hat = hatInput.Text
-        local face = faceInput.Text
+        local hat, face = hatInput.Text, faceInput.Text
         if hat ~= "" or face ~= "" then
             executeCommands(hat, face)
-            statusLabel.Text = "⚡ Commands executed!"
+            statusLabel.Text = "⚡ Applied"
             statusLabel.TextColor3 = Color3.new(0.8, 0.4, 0.1)
         else
-            statusLabel.Text = "❌ Enter at least one ID!"
+            statusLabel.Text = "❌ ID required"
             statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
         end
     end)
@@ -470,18 +339,18 @@ local function createSalonGUI()
         local name = presetInput.Text
         if name ~= "" and characterPresets[name] then
             if deletePreset(name) then
-                statusLabel.Text = "🗑️ Preset '" .. name .. "' deleted!"
+                statusLabel.Text = "🗑️ Deleted: " .. name
                 statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
                 presetInput.Text = ""
                 hatInput.Text = ""
                 faceInput.Text = ""
                 updatePresetList()
             else
-                statusLabel.Text = "❌ Failed to delete!"
+                statusLabel.Text = "❌ Delete failed"
                 statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
             end
         else
-            statusLabel.Text = "❌ Preset not found!"
+            statusLabel.Text = "❌ Preset not found"
             statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
         end
     end)
@@ -489,32 +358,30 @@ local function createSalonGUI()
     renameButton.MouseButton1Click:Connect(function()
         local oldName = presetInput.Text
         if oldName ~= "" and characterPresets[oldName] then
-            -- Simple rename dialog
-            presetInput.PlaceholderText = "Enter new name for '" .. oldName .. "'..."
             presetInput.Text = ""
-            statusLabel.Text = "✏️ Enter new name and click RENAME again"
+            presetInput.PlaceholderText = "New name for '" .. oldName .. "'..."
+            statusLabel.Text = "✏️ Enter new name"
             statusLabel.TextColor3 = Color3.new(0.6, 0.4, 0.8)
             
-            -- One-time rename handler
             local connection
             connection = renameButton.MouseButton1Click:Connect(function()
                 local newName = presetInput.Text
                 if newName ~= "" and newName ~= oldName then
                     if renamePreset(oldName, newName) then
-                        statusLabel.Text = "✏️ Renamed '" .. oldName .. "' to '" .. newName .. "'!"
+                        statusLabel.Text = "✏️ Renamed to: " .. newName
                         statusLabel.TextColor3 = Color3.new(0.6, 0.4, 0.8)
                         presetInput.Text = newName
-                        presetInput.PlaceholderText = "Enter preset name..."
+                        presetInput.PlaceholderText = "Preset Name..."
                         updatePresetList()
                     else
-                        statusLabel.Text = "❌ Rename failed!"
+                        statusLabel.Text = "❌ Rename failed"
                         statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
                     end
                     connection:Disconnect()
                 end
             end)
         else
-            statusLabel.Text = "❌ Select preset to rename!"
+            statusLabel.Text = "❌ Select preset"
             statusLabel.TextColor3 = Color3.new(0.8, 0.2, 0.2)
         end
     end)
@@ -523,12 +390,10 @@ local function createSalonGUI()
         screenGui:Destroy()
     end)
     
-    -- Make draggable
-    local dragging = false
-    local dragInput, mousePos, framePos
-    
+    -- Draggable
+    local dragging, dragInput, mousePos, framePos
     mainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             mousePos = input.Position
             framePos = mainFrame.Position
@@ -536,7 +401,7 @@ local function createSalonGUI()
     end)
     
     mainFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
@@ -554,23 +419,14 @@ local function createSalonGUI()
     end)
     
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end)
     
-    -- Initialize
     updatePresetList()
-    
     return screenGui
 end
 
 -- Auto-execute
-print("🎭 Loading Salon de Fiesta...")
-print("✨ Created by farinoveri")
-print("📁 Main file: " .. presetFile)
-
 createSalonGUI()
-
-print("🚀 Salon de Fiesta loaded successfully!")
-print("💾 " .. tostring(#characterPresets) .. " presets loaded from local file")
