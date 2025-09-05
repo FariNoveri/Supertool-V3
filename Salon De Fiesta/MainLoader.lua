@@ -1,4 +1,4 @@
--- Salon de Fiesta - Exploit Version (Compact Modern UI)
+-- Salon de Fiesta - Exploit Version (Compact Modern UI with Minimize)
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
@@ -184,8 +184,8 @@ local function createSalonGUI()
     applyButton.BackgroundColor3 = Color3.new(0.8, 0.4, 0.1)
     applyButton.Text = "APPLY"
     applyButton.TextColor3 = Color3.new(1, 1, 1)
-    applyButton.TextSize = 12
-    applyButton.Font = Enum.Font.GothamBold
+    saveButton.TextSize = 12
+    saveButton.Font = Enum.Font.GothamBold
     applyButton.Parent = mainFrame
     Instance.new("UICorner", applyButton).CornerRadius = UDim.new(0, 4)
     
@@ -238,17 +238,43 @@ local function createSalonGUI()
     statusLabel.Font = Enum.Font.Gotham
     statusLabel.Parent = mainFrame
     
-    -- Close Button
-    local closeButton = Instance.new("TextButton")
-    closeButton.Size = UDim2.new(0, 20, 0, 20)
-    closeButton.Position = UDim2.new(1, -30, 0, 10)
-    closeButton.BackgroundColor3 = Color3.new(0.8, 0.2, 0.2)
-    closeButton.Text = "×"
-    closeButton.TextColor3 = Color3.new(1, 1, 1)
-    closeButton.TextSize = 14
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.Parent = mainFrame
-    Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0, 4)
+    -- Minimize Button (Circular with 'S')
+    local minimizeButton = Instance.new("TextButton")
+    minimizeButton.Size = UDim2.new(0, 30, 0, 30)
+    minimizeButton.Position = UDim2.new(1, -40, 0, 5)
+    minimizeButton.BackgroundColor3 = Color3.new(0.2, 0.5, 0.8)
+    minimizeButton.Text = "S"
+    minimizeButton.TextColor3 = Color3.new(1, 1, 1)
+    minimizeButton.TextSize = 14
+    minimizeButton.Font = Enum.Font.GothamBold
+    minimizeButton.Parent = mainFrame
+    local minCorner = Instance.new("UICorner")
+    minCorner.CornerRadius = UDim.new(0.5, 0) -- Fully circular
+    minCorner.Parent = minimizeButton
+    
+    -- Minimize Icon Frame
+    local iconFrame = Instance.new("Frame")
+    iconFrame.Size = UDim2.new(0, 40, 0, 40)
+    iconFrame.Position = UDim2.new(0.5, -20, 0.5, -20)
+    iconFrame.BackgroundColor3 = Color3.new(0.2, 0.5, 0.8)
+    iconFrame.BackgroundTransparency = 0
+    iconFrame.BorderSizePixel = 0
+    iconFrame.Visible = false
+    iconFrame.Parent = screenGui
+    local iconCorner = Instance.new("UICorner")
+    iconCorner.CornerRadius = UDim.new(0.5, 0) -- Fully circular
+    iconCorner.Parent = iconFrame
+    
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Size = UDim2.new(1, 0, 1, 0)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Text = "S"
+    iconLabel.TextColor3 = Color3.new(1, 1, 1)
+    iconLabel.TextSize = 20
+    iconLabel.Font = Enum.Font.GothamBold
+    iconLabel.TextXAlignment = Enum.TextXAlignment.Center
+    iconLabel.TextYAlignment = Enum.TextYAlignment.Center
+    iconLabel.Parent = iconFrame
     
     -- Update preset list
     local function updatePresetList()
@@ -386,11 +412,28 @@ local function createSalonGUI()
         end
     end)
     
-    closeButton.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
+    -- Minimize functionality
+    local isMinimized = false
+    minimizeButton.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        if isMinimized then
+            mainFrame.Visible = false
+            iconFrame.Visible = true
+        else
+            mainFrame.Visible = true
+            iconFrame.Visible = false
+        end
     end)
     
-    -- Draggable
+    iconFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isMinimized = false
+            mainFrame.Visible = true
+            iconFrame.Visible = false
+        end
+    end)
+    
+    -- Draggable for main frame
     local dragging, dragInput, mousePos, framePos
     mainFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -421,6 +464,40 @@ local function createSalonGUI()
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
+        end
+    end)
+    
+    -- Draggable for icon frame
+    local iconDragging, iconDragInput, iconMousePos, iconFramePos
+    iconFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            iconDragging = true
+            iconMousePos = input.Position
+            iconFramePos = iconFrame.Position
+        end
+    end)
+    
+    iconFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            iconDragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == iconDragInput and iconDragging then
+            local delta = input.Position - iconMousePos
+            iconFrame.Position = UDim2.new(
+                iconFramePos.X.Scale,
+                iconFramePos.X.Offset + delta.X,
+                iconFramePos.Y.Scale,
+                iconFramePos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            iconDragging = false
         end
     end)
     
