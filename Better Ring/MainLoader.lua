@@ -382,11 +382,19 @@ local function createDropdown(parent, text, options, default, callback)
             DropList.Size = UDim2.new(0, absSize.X, 0, dropHeight)
             local screenHeight = ScreenGui.AbsoluteSize.Y
             local spaceBelow = screenHeight - (absPos.Y + absSize.Y)
+            local y
             if spaceBelow >= dropHeight then
-                DropList.Position = UDim2.new(0, absPos.X, 0, absPos.Y + absSize.Y)
+                y = absPos.Y + absSize.Y
             else
-                DropList.Position = UDim2.new(0, absPos.X, 0, absPos.Y - dropHeight)
+                y = absPos.Y - dropHeight
             end
+            if y + dropHeight > screenHeight then
+                y = screenHeight - dropHeight
+            end
+            if y < 0 then
+                y = 0
+            end
+            DropList.Position = UDim2.new(0, absPos.X, 0, y)
         else
             DropList.Parent = DropdownFrame
         end
@@ -437,6 +445,25 @@ createToggle(MainTab, "Fling Players", function(state)
             Text = "Objects will fling to players!",
             Duration = 3
         })
+    end
+end)
+
+createButton(MainTab, "Remove Moving Objects", function()
+    for _, part in pairs(parts) do
+        part:Destroy()
+    end
+    parts = {}
+end)
+
+createButton(MainTab, "Reset Object Positions", function()
+    for _, part in pairs(parts) do
+        if anchoredParts[part] then
+            part.CFrame = anchoredParts[part].originalCFrame
+            part.Anchored = anchoredParts[part].originalAnchored
+        else
+            part.Position = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(math.random(-10,10), 5, math.random(-10,10))
+        end
+        part.Velocity = Vector3.new(0,0,0)
     end
 end)
 
