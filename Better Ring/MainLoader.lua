@@ -13,7 +13,9 @@ local config = {
     includeAnchored = false,
     tornadoEnabled = false,
     flingPlayers = false,
-    flingPower = 500
+    flingMode = "default", -- default, nearest_player, nearest_object
+    flingPower = 500,
+    autoDuplicate = 0 -- 0 = off, 1 = 1x, 2 = 2x, etc.
 }
 
 -- Create GUI
@@ -307,6 +309,72 @@ local function createButton(parent, text, callback)
     end)
 end
 
+local function createDropdown(parent, text, options, default, callback)
+    local DropdownFrame = Instance.new("Frame")
+    DropdownFrame.Size = UDim2.new(1, 0, 0, 40)
+    DropdownFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    DropdownFrame.BorderSizePixel = 0
+    DropdownFrame.Parent = parent
+    
+    local DropdownCorner = Instance.new("UICorner")
+    DropdownCorner.CornerRadius = UDim.new(0, 8)
+    DropdownCorner.Parent = DropdownFrame
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -20, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text .. ": " .. default
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = DropdownFrame
+    
+    local DropdownButton = Instance.new("TextButton")
+    DropdownButton.Size = UDim2.new(1, 0, 1, 0)
+    DropdownButton.BackgroundTransparency = 1
+    DropdownButton.Text = ""
+    DropdownButton.Parent = DropdownFrame
+    
+    local DropList = Instance.new("Frame")
+    DropList.Size = UDim2.new(1, 0, 0, #options * 30)
+    DropList.Position = UDim2.new(0, 0, 1, 5)
+    DropList.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    DropList.BorderSizePixel = 0
+    DropList.Visible = false
+    DropList.Parent = DropdownFrame
+    
+    local DropCorner = Instance.new("UICorner")
+    DropCorner.CornerRadius = UDim.new(0, 8)
+    DropCorner.Parent = DropList
+    
+    local DropLayout = Instance.new("UIListLayout")
+    DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    DropLayout.Parent = DropList
+    
+    for i, opt in ipairs(options) do
+        local OptButton = Instance.new("TextButton")
+        OptButton.Size = UDim2.new(1, 0, 0, 30)
+        OptButton.BackgroundTransparency = 1
+        OptButton.Text = opt
+        OptButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        OptButton.Font = Enum.Font.Gotham
+        OptButton.TextSize = 14
+        OptButton.Parent = DropList
+        
+        OptButton.MouseButton1Click:Connect(function()
+            Label.Text = text .. ": " .. opt
+            callback(opt)
+            DropList.Visible = false
+        end)
+    end
+    
+    DropdownButton.MouseButton1Click:Connect(function()
+        DropList.Visible = not DropList.Visible
+    end)
+end
+
 -- Main Tab Content
 createToggle(MainTab, "Enable Tornado", function(state)
     config.tornadoEnabled = state
@@ -355,11 +423,21 @@ createSlider(SettingsTab, "Fling Power", 2000, config.flingPower, function(value
     config.flingPower = value
 end)
 
+createDropdown(SettingsTab, "Fling Mode", {"default", "nearest_player", "nearest_object"}, config.flingMode, function(value)
+    config.flingMode = value
+end)
+
+createSlider(SettingsTab, "Auto Duplicate", 5, config.autoDuplicate, function(value)
+    config.autoDuplicate = value
+end)
+
 createButton(SettingsTab, "Reset to Default", function()
     config.radius = 50
     config.height = 100
     config.rotationSpeed = 10
     config.attractionStrength = 1000
+    config.flingMode = "default"
+    config.autoDuplicate = 0
     game.StarterGui:SetCore("SendNotification", {
         Title = "Settings",
         Text = "Reset to default!",
@@ -370,30 +448,6 @@ end)
 -- Extras Tab Content
 createButton(ExtrasTab, "Fly GUI", function()
     loadstring(game:HttpGet('https://pastebin.com/raw/YSL3xKYU'))()
-end)
-
-createButton(ExtrasTab, "No Fall Damage", function()
-    local runsvc = game:GetService("RunService")
-    local heartbeat = runsvc.Heartbeat
-    local rstepped = runsvc.RenderStepped
-    local novel = Vector3.zero
-    
-    local function nofalldamage(chr)
-        local root = chr:WaitForChild("HumanoidRootPart")
-        if root then
-            local con
-            con = heartbeat:Connect(function()
-                if not root.Parent then con:Disconnect() end
-                local oldvel = root.AssemblyLinearVelocity
-                root.AssemblyLinearVelocity = novel
-                rstepped:Wait()
-                root.AssemblyLinearVelocity = oldvel
-            end)
-        end
-    end
-    
-    nofalldamage(LocalPlayer.Character)
-    LocalPlayer.CharacterAdded:Connect(nofalldamage)
 end)
 
 createButton(ExtrasTab, "Noclip", function()
@@ -417,13 +471,8 @@ createButton(ExtrasTab, "Noclip", function()
     noclip()
 end)
 
-createButton(ExtrasTab, "Infinite Jump", function()
-    local InfiniteJumpEnabled = true
-    UserInputService.JumpRequest:connect(function()
-        if InfiniteJumpEnabled then
-            LocalPlayer.Character:FindFirstChildOfClass'Humanoid':ChangeState("Jumping")
-        end
-    end)
+createButton(ExtrasTab, "ESP", function()
+    loadstring(game:HttpGet('https://pastebin.com/raw/5UepQv07'))()
 end)
 
 createButton(ExtrasTab, "Infinite Yield", function()
@@ -527,7 +576,7 @@ local function handleAnchoredPart(part)
 end
 
 local function RetainPart(Part)
-    if Part:IsA("BasePart") and Part:IsDescendantOf(workspace) then
+    if Part:IsA("BasePart") and Part:IsDescendantOf(workspace) and not Part:IsA("Terrain") then
         if Part.Parent == LocalPlayer.Character or Part:IsDescendantOf(LocalPlayer.Character) then
             return false
         end
@@ -573,6 +622,15 @@ end
 workspace.DescendantAdded:Connect(addPart)
 workspace.DescendantRemoving:Connect(removePart)
 
+local function duplicatePart(part, times)
+    for i = 1, times do
+        local clone = part:Clone()
+        clone.Parent = part.Parent
+        clone.Position = part.Position + Vector3.new(math.random(-5,5), math.random(-5,5), math.random(-5,5))
+        addPart(clone)
+    end
+end
+
 RunService.Heartbeat:Connect(function()
     if not config.tornadoEnabled then return end
     
@@ -580,12 +638,18 @@ RunService.Heartbeat:Connect(function()
     if humanoidRootPart then
         local tornadoCenter = humanoidRootPart.Position
         
-        -- Get all players for fling mode
+        -- Get all players and objects for fling modes
         local targetPlayers = {}
+        local targetObjects = {}
         if config.flingPlayers then
             for _, player in pairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                     table.insert(targetPlayers, player.Character.HumanoidRootPart)
+                end
+            end
+            for _, obj in pairs(parts) do
+                if obj ~= humanoidRootPart then
+                    table.insert(targetObjects, obj)
                 end
             end
         end
@@ -602,10 +666,35 @@ RunService.Heartbeat:Connect(function()
                 local pos = part.Position
                 local targetPos
                 
-                -- Fling mode: target random player
-                if config.flingPlayers and #targetPlayers > 0 then
-                    local randomPlayer = targetPlayers[math.random(1, #targetPlayers)]
-                    targetPos = randomPlayer.Position
+                -- Fling mode
+                if config.flingPlayers then
+                    local target
+                    if config.flingMode == "default" then
+                        target = targetPlayers[math.random(1, #targetPlayers)]
+                    elseif config.flingMode == "nearest_player" then
+                        local nearestDist = math.huge
+                        for _, p in pairs(targetPlayers) do
+                            local dist = (pos - p.Position).Magnitude
+                            if dist < nearestDist then
+                                nearestDist = dist
+                                target = p
+                            end
+                        end
+                    elseif config.flingMode == "nearest_object" then
+                        local nearestDist = math.huge
+                        for _, o in pairs(targetObjects) do
+                            if o ~= part then
+                                local dist = (pos - o.Position).Magnitude
+                                if dist < nearestDist then
+                                    nearestDist = dist
+                                    target = o
+                                end
+                            end
+                        end
+                    end
+                    if target then
+                        targetPos = target.Position
+                    end
                 else
                     -- Normal tornado mode
                     local distance = (Vector3.new(pos.X, tornadoCenter.Y, pos.Z) - tornadoCenter).Magnitude
@@ -619,13 +708,20 @@ RunService.Heartbeat:Connect(function()
                     )
                 end
                 
-                if anchoredParts[part] and anchoredParts[part].bodyPosition then
-                    anchoredParts[part].bodyPosition.Position = targetPos
-                    anchoredParts[part].bodyGyro.CFrame = CFrame.new(part.Position, targetPos)
-                else
-                    local directionToTarget = (targetPos - part.Position).unit
-                    local power = config.flingPlayers and config.flingPower or config.attractionStrength
-                    part.Velocity = directionToTarget * power
+                if targetPos then
+                    if anchoredParts[part] and anchoredParts[part].bodyPosition then
+                        anchoredParts[part].bodyPosition.Position = targetPos
+                        anchoredParts[part].bodyGyro.CFrame = CFrame.new(part.Position, targetPos)
+                    else
+                        local directionToTarget = (targetPos - part.Position).unit
+                        local power = config.flingPlayers and config.flingPower or config.attractionStrength
+                        part.Velocity = directionToTarget * power
+                    end
+                end
+                
+                -- Auto duplicate
+                if config.autoDuplicate > 0 and math.random(1, 100) < 5 then -- Random chance to duplicate
+                    duplicatePart(part, config.autoDuplicate)
                 end
             end
         end
