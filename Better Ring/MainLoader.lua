@@ -338,12 +338,12 @@ local function createDropdown(parent, text, options, default, callback)
     DropdownButton.Parent = DropdownFrame
     
     local DropList = Instance.new("Frame")
-    DropList.Size = UDim2.new(1, 0, 0, #options * 30)
-    DropList.Position = UDim2.new(0, 0, 1, 5)
+    DropList.Size = UDim2.new(1, 0, 0, 0) -- Initial size, will set later
     DropList.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
     DropList.BorderSizePixel = 0
     DropList.Visible = false
-    DropList.Parent = DropdownFrame
+    DropList.ZIndex = 10
+    DropList.Parent = DropdownFrame -- Initially
     
     local DropCorner = Instance.new("UICorner")
     DropCorner.CornerRadius = UDim.new(0, 8)
@@ -361,6 +361,7 @@ local function createDropdown(parent, text, options, default, callback)
         OptButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         OptButton.Font = Enum.Font.Gotham
         OptButton.TextSize = 14
+        OptButton.ZIndex = 10
         OptButton.Parent = DropList
         
         OptButton.MouseButton1Click:Connect(function()
@@ -372,7 +373,40 @@ local function createDropdown(parent, text, options, default, callback)
     
     DropdownButton.MouseButton1Click:Connect(function()
         DropList.Visible = not DropList.Visible
+        if DropList.Visible then
+            DropList.Parent = ScreenGui
+            local absPos = DropdownFrame.AbsolutePosition
+            local absSize = DropdownFrame.AbsoluteSize
+            local dropHeight = #options * 30
+            DropList.Size = UDim2.new(0, absSize.X, 0, dropHeight)
+            local screenHeight = ScreenGui.AbsoluteSize.Y
+            local spaceBelow = screenHeight - (absPos.Y + absSize.Y)
+            if spaceBelow < dropHeight + 5 then
+                DropList.Position = UDim2.new(0, absPos.X, 0, absPos.Y - dropHeight - 5)
+            else
+                DropList.Position = UDim2.new(0, absPos.X, 0, absPos.Y + absSize.Y + 5)
+            end
+        end
     end)
+    
+    -- Close dropdown when clicking outside
+    local function closeDropdown(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and DropList.Visible then
+            local mousePos = UserInputService:GetMouseLocation()
+            local dropAbsPos = DropList.AbsolutePosition
+            local dropAbsSize = DropList.AbsoluteSize
+            local frameAbsPos = DropdownFrame.AbsolutePosition
+            local frameAbsSize = DropdownFrame.AbsoluteSize
+            if not (mousePos.X >= dropAbsPos.X and mousePos.X <= dropAbsPos.X + dropAbsSize.X and
+                    mousePos.Y >= dropAbsPos.Y and mousePos.Y <= dropAbsPos.Y + dropAbsSize.Y) and
+               not (mousePos.X >= frameAbsPos.X and mousePos.X <= frameAbsPos.X + frameAbsSize.X and
+                    mousePos.Y >= frameAbsPos.Y and mousePos.Y <= frameAbsPos.Y + frameAbsSize.Y) then
+                DropList.Visible = false
+            end
+        end
+    end
+    
+    UserInputService.InputBegan:Connect(closeDropdown)
 end
 
 -- Main Tab Content
@@ -472,7 +506,7 @@ createButton(ExtrasTab, "Noclip", function()
 end)
 
 createButton(ExtrasTab, "ESP", function()
-    loadstring(game:HttpGet('https://pastebin.com/raw/5UepQv07'))()
+    loadstring(game:HttpGet('https://pastebin.com/raw/UcWxrfh5'))()
 end)
 
 createButton(ExtrasTab, "Infinite Yield", function()
@@ -553,13 +587,13 @@ local function handleAnchoredPart(part)
         if not anchoredParts[part].bodyPosition then
             local bp = Instance.new("BodyPosition")
             bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-            bp.P = 10000
+            bp.P = 50000
             bp.Parent = part
             anchoredParts[part].bodyPosition = bp
             
             local bg = Instance.new("BodyGyro")
             bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-            bg.P = 10000
+            bg.P = 50000
             bg.Parent = part
             anchoredParts[part].bodyGyro = bg
         end
