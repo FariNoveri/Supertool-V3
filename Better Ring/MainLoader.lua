@@ -11,7 +11,9 @@ local config = {
     rotationSpeed = 10,
     attractionStrength = 1000,
     includeAnchored = false,
-    tornadoEnabled = false
+    tornadoEnabled = false,
+    flingPlayers = false,
+    flingPower = 500
 }
 
 -- Create GUI
@@ -321,6 +323,17 @@ createToggle(MainTab, "Include Anchored Parts", function(state)
     config.includeAnchored = state
 end)
 
+createToggle(MainTab, "Fling Players", function(state)
+    config.flingPlayers = state
+    if state then
+        game.StarterGui:SetCore("SendNotification", {
+            Title = "Fling Mode",
+            Text = "Objects will fling to players!",
+            Duration = 3
+        })
+    end
+end)
+
 -- Settings Tab Content
 createSlider(SettingsTab, "Radius", 500, config.radius, function(value)
     config.radius = value
@@ -336,6 +349,10 @@ end)
 
 createSlider(SettingsTab, "Attraction Strength", 5000, config.attractionStrength, function(value)
     config.attractionStrength = value
+end)
+
+createSlider(SettingsTab, "Fling Power", 2000, config.flingPower, function(value)
+    config.flingPower = value
 end)
 
 createButton(SettingsTab, "Reset to Default", function()
@@ -563,6 +580,16 @@ RunService.Heartbeat:Connect(function()
     if humanoidRootPart then
         local tornadoCenter = humanoidRootPart.Position
         
+        -- Get all players for fling mode
+        local targetPlayers = {}
+        if config.flingPlayers then
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    table.insert(targetPlayers, player.Character.HumanoidRootPart)
+                end
+            end
+        end
+        
         for _, part in pairs(parts) do
             if part.Parent then
                 if part.Anchored then
@@ -573,22 +600,32 @@ RunService.Heartbeat:Connect(function()
                 end
                 
                 local pos = part.Position
-                local distance = (Vector3.new(pos.X, tornadoCenter.Y, pos.Z) - tornadoCenter).Magnitude
-                local angle = math.atan2(pos.Z - tornadoCenter.Z, pos.X - tornadoCenter.X)
-                local newAngle = angle + math.rad(config.rotationSpeed)
+                local targetPos
                 
-                local targetPos = Vector3.new(
-                    tornadoCenter.X + math.cos(newAngle) * math.min(config.radius, distance),
-                    tornadoCenter.Y + (config.height * (math.abs(math.sin((pos.Y - tornadoCenter.Y) / config.height)))),
-                    tornadoCenter.Z + math.sin(newAngle) * math.min(config.radius, distance)
-                )
+                -- Fling mode: target random player
+                if config.flingPlayers and #targetPlayers > 0 then
+                    local randomPlayer = targetPlayers[math.random(1, #targetPlayers)]
+                    targetPos = randomPlayer.Position
+                else
+                    -- Normal tornado mode
+                    local distance = (Vector3.new(pos.X, tornadoCenter.Y, pos.Z) - tornadoCenter).Magnitude
+                    local angle = math.atan2(pos.Z - tornadoCenter.Z, pos.X - tornadoCenter.X)
+                    local newAngle = angle + math.rad(config.rotationSpeed)
+                    
+                    targetPos = Vector3.new(
+                        tornadoCenter.X + math.cos(newAngle) * math.min(config.radius, distance),
+                        tornadoCenter.Y + (config.height * (math.abs(math.sin((pos.Y - tornadoCenter.Y) / config.height)))),
+                        tornadoCenter.Z + math.sin(newAngle) * math.min(config.radius, distance)
+                    )
+                end
                 
                 if anchoredParts[part] and anchoredParts[part].bodyPosition then
                     anchoredParts[part].bodyPosition.Position = targetPos
                     anchoredParts[part].bodyGyro.CFrame = CFrame.new(part.Position, targetPos)
                 else
                     local directionToTarget = (targetPos - part.Position).unit
-                    part.Velocity = directionToTarget * config.attractionStrength
+                    local power = config.flingPlayers and config.flingPower or config.attractionStrength
+                    part.Velocity = directionToTarget * power
                 end
             end
         end
@@ -597,6 +634,6 @@ end)
 
 game.StarterGui:SetCore("SendNotification", {
     Title = "Super Ring Parts V7",
-    Text = "Made by you, Credit by lukas",
+    Text = "Made by Fari Noveri",
     Duration = 5
 })
