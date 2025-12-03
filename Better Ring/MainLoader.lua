@@ -460,9 +460,24 @@ createToggle(MainTab, "Remove Mode (Click to Remove)", function(state)
     removeMode = state
 end)
 
+local selectMode = false
+createToggle(MainTab, "Select Mode (Click to Select)", function(state)
+    selectMode = state
+end)
+
 local mouse = LocalPlayer:GetMouse()
 mouse.Button1Down:Connect(function()
-    if removeMode then
+    if selectMode then
+        local target = mouse.Target
+        if target and table.find(parts, target) then
+            selectedPart = target
+            game.StarterGui:SetCore("SendNotification", {
+                Title = "Selected",
+                Text = target.Name,
+                Duration = 3
+            })
+        end
+    elseif removeMode then
         local target = mouse.Target
         if target and table.find(parts, target) then
             removePart(target)
@@ -471,7 +486,56 @@ mouse.Button1Down:Connect(function()
     end
 end)
 
-createButton(MainTab, "Move Up ↑", function()
+local selectedPart = nil
+
+createButton(MainTab, "Deselect", function()
+    selectedPart = nil
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Deselected",
+        Text = "No object selected",
+        Duration = 3
+    })
+end)
+
+createButton(MainTab, "Move Selected Up ↑", function()
+    if selectedPart and selectedPart.Parent then
+        selectedPart.Position = selectedPart.Position + Vector3.new(0, 10, 0)
+        selectedPart.Velocity = Vector3.new(0, 0, 0)
+    end
+end)
+
+createButton(MainTab, "Move Selected Down ↓", function()
+    if selectedPart and selectedPart.Parent then
+        selectedPart.Position = selectedPart.Position + Vector3.new(0, -10, 0)
+        selectedPart.Velocity = Vector3.new(0, 0, 0)
+    end
+end)
+
+local function getPlayerDirections()
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        return hrp.CFrame.RightVector
+    end
+    return Vector3.new(1, 0, 0)
+end
+
+createButton(MainTab, "Move Selected Left ←", function()
+    if selectedPart and selectedPart.Parent then
+        local rightVector = getPlayerDirections()
+        selectedPart.Position = selectedPart.Position - rightVector * 10
+        selectedPart.Velocity = Vector3.new(0, 0, 0)
+    end
+end)
+
+createButton(MainTab, "Move Selected Right →", function()
+    if selectedPart and selectedPart.Parent then
+        local rightVector = getPlayerDirections()
+        selectedPart.Position = selectedPart.Position + rightVector * 10
+        selectedPart.Velocity = Vector3.new(0, 0, 0)
+    end
+end)
+
+createButton(MainTab, "Move All Up ↑", function()
     for _, part in pairs(parts) do
         if part.Parent then
             part.Position = part.Position + Vector3.new(0, 10, 0)
@@ -480,7 +544,7 @@ createButton(MainTab, "Move Up ↑", function()
     end
 end)
 
-createButton(MainTab, "Move Down ↓", function()
+createButton(MainTab, "Move All Down ↓", function()
     for _, part in pairs(parts) do
         if part.Parent then
             part.Position = part.Position + Vector3.new(0, -10, 0)
@@ -489,15 +553,7 @@ createButton(MainTab, "Move Down ↓", function()
     end
 end)
 
-local function getPlayerDirections()
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        return hrp.CFrame.RightVector, -hrp.CFrame.LookVector
-    end
-    return Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
-end
-
-createButton(MainTab, "Move Left ←", function()
+createButton(MainTab, "Move All Left ←", function()
     local rightVector = getPlayerDirections()
     for _, part in pairs(parts) do
         if part.Parent then
@@ -507,7 +563,7 @@ createButton(MainTab, "Move Left ←", function()
     end
 end)
 
-createButton(MainTab, "Move Right →", function()
+createButton(MainTab, "Move All Right →", function()
     local rightVector = getPlayerDirections()
     for _, part in pairs(parts) do
         if part.Parent then
@@ -779,13 +835,14 @@ RunService.Heartbeat:Connect(function()
                 end
                 
                 local pos = part.Position
-                local targetPos
+                local target = nil
                 
                 -- Fling mode
                 if config.flingPlayers then
-                    local target
                     if config.flingMode == "default" then
-                        target = targetPlayers[math.random(1, #targetPlayers)]
+                        if #targetPlayers > 0 then
+                            target = targetPlayers[math.random(1, #targetPlayers)]
+                        end
                     elseif config.flingMode == "nearest_player" then
                         local nearestDist = math.huge
                         for _, p in pairs(targetPlayers) do
@@ -807,9 +864,11 @@ RunService.Heartbeat:Connect(function()
                             end
                         end
                     end
-                    if target then
-                        targetPos = target.Position
-                    end
+                end
+                
+                local targetPos
+                if target then
+                    targetPos = target.Position
                 else
                     -- Normal tornado mode
                     local distance = (Vector3.new(pos.X, tornadoCenter.Y, pos.Z) - tornadoCenter).Magnitude
