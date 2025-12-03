@@ -61,7 +61,7 @@ local Subtitle = Instance.new("TextLabel")
 Subtitle.Size = UDim2.new(1, -80, 0, 15)
 Subtitle.Position = UDim2.new(0, 10, 1, -18)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "Made by you, Credit by lukas"
+Subtitle.Text = "Made by Fari Noveri"
 Subtitle.TextColor3 = Color3.fromRGB(150, 150, 150)
 Subtitle.Font = Enum.Font.Gotham
 Subtitle.TextSize = 11
@@ -634,6 +634,6 @@ end)
 
 game.StarterGui:SetCore("SendNotification", {
     Title = "Super Ring Parts V7",
-    Text = "Made by Fari Noveri",
+    Text = "Made by Me, Credit by lukas",
     Duration = 5
 })
