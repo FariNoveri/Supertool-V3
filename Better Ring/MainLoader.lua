@@ -448,22 +448,72 @@ createToggle(MainTab, "Fling Players", function(state)
     end
 end)
 
-createButton(MainTab, "Remove Moving Objects", function()
+createButton(MainTab, "Remove All Moving Objects", function()
     for _, part in pairs(parts) do
         part:Destroy()
     end
     parts = {}
 end)
 
-createButton(MainTab, "Reset Object Positions", function()
-    for _, part in pairs(parts) do
-        if anchoredParts[part] then
-            part.CFrame = anchoredParts[part].originalCFrame
-            part.Anchored = anchoredParts[part].originalAnchored
-        else
-            part.Position = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(math.random(-10,10), 5, math.random(-10,10))
+local removeMode = false
+createToggle(MainTab, "Remove Mode (Click to Remove)", function(state)
+    removeMode = state
+end)
+
+local mouse = LocalPlayer:GetMouse()
+mouse.Button1Down:Connect(function()
+    if removeMode then
+        local target = mouse.Target
+        if target and table.find(parts, target) then
+            removePart(target)
+            target:Destroy()
         end
-        part.Velocity = Vector3.new(0,0,0)
+    end
+end)
+
+createButton(MainTab, "Move Up ↑", function()
+    for _, part in pairs(parts) do
+        if part.Parent then
+            part.Position = part.Position + Vector3.new(0, 10, 0)
+            part.Velocity = Vector3.new(0, 0, 0)
+        end
+    end
+end)
+
+createButton(MainTab, "Move Down ↓", function()
+    for _, part in pairs(parts) do
+        if part.Parent then
+            part.Position = part.Position + Vector3.new(0, -10, 0)
+            part.Velocity = Vector3.new(0, 0, 0)
+        end
+    end
+end)
+
+local function getPlayerDirections()
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        return hrp.CFrame.RightVector, -hrp.CFrame.LookVector
+    end
+    return Vector3.new(1, 0, 0), Vector3.new(0, 0, 1)
+end
+
+createButton(MainTab, "Move Left ←", function()
+    local rightVector = getPlayerDirections()
+    for _, part in pairs(parts) do
+        if part.Parent then
+            part.Position = part.Position - rightVector * 10
+            part.Velocity = Vector3.new(0, 0, 0)
+        end
+    end
+end)
+
+createButton(MainTab, "Move Right →", function()
+    local rightVector = getPlayerDirections()
+    for _, part in pairs(parts) do
+        if part.Parent then
+            part.Position = part.Position + rightVector * 10
+            part.Velocity = Vector3.new(0, 0, 0)
+        end
     end
 end)
 
