@@ -123,7 +123,6 @@ local function createTab(name, index)
     TabContent.BackgroundTransparency = 1
     TabContent.BorderSizePixel = 0
     TabContent.ScrollBarThickness = 6
-    TabContent.ClipsDescendants = false
     TabContent.Visible = false
     TabContent.Parent = ContentFrame
     TabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -339,8 +338,7 @@ local function createDropdown(parent, text, options, default, callback)
     DropdownButton.Parent = DropdownFrame
     
     local DropList = Instance.new("Frame")
-    DropList.Size = UDim2.new(1, 0, 0, #options * 30)
-    DropList.Position = UDim2.new(0, 0, 1, 5)
+    DropList.Size = UDim2.new(0, 0, 0, 0)
     DropList.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
     DropList.BorderSizePixel = 0
     DropList.Visible = false
@@ -370,11 +368,28 @@ local function createDropdown(parent, text, options, default, callback)
             Label.Text = text .. ": " .. opt
             callback(opt)
             DropList.Visible = false
+            DropList.Parent = DropdownFrame
         end)
     end
     
     DropdownButton.MouseButton1Click:Connect(function()
         DropList.Visible = not DropList.Visible
+        if DropList.Visible then
+            DropList.Parent = ScreenGui
+            local absPos = DropdownFrame.AbsolutePosition
+            local absSize = DropdownFrame.AbsoluteSize
+            local dropHeight = #options * 30
+            DropList.Size = UDim2.new(0, absSize.X, 0, dropHeight)
+            local screenHeight = ScreenGui.AbsoluteSize.Y
+            local spaceBelow = screenHeight - (absPos.Y + absSize.Y)
+            if spaceBelow >= dropHeight then
+                DropList.Position = UDim2.new(0, absPos.X, 0, absPos.Y + absSize.Y)
+            else
+                DropList.Position = UDim2.new(0, absPos.X, 0, absPos.Y - dropHeight)
+            end
+        else
+            DropList.Parent = DropdownFrame
+        end
     end)
     
     -- Close dropdown when clicking outside
@@ -390,6 +405,7 @@ local function createDropdown(parent, text, options, default, callback)
                not (mousePos.X >= frameAbsPos.X and mousePos.X <= frameAbsPos.X + frameAbsSize.X and
                     mousePos.Y >= frameAbsPos.Y and mousePos.Y <= frameAbsPos.Y + frameAbsSize.Y) then
                 DropList.Visible = false
+                DropList.Parent = DropdownFrame
             end
         end
     end
