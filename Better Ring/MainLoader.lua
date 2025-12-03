@@ -449,7 +449,7 @@ createToggle(MainTab, "Fling Players", function(state)
 end)
 
 createButton(MainTab, "Remove All Moving Objects", function()
-    for _, part in pairs(parts) do
+    for _, part in pairs(parts or {}) do
         part:Destroy()
     end
     parts = {}
@@ -536,7 +536,7 @@ createButton(MainTab, "Move Selected Right →", function()
 end)
 
 createButton(MainTab, "Move All Up ↑", function()
-    for _, part in pairs(parts) do
+    for _, part in pairs(parts or {}) do
         if part.Parent then
             part.Position = part.Position + Vector3.new(0, 10, 0)
             part.Velocity = Vector3.new(0, 0, 0)
@@ -545,7 +545,7 @@ createButton(MainTab, "Move All Up ↑", function()
 end)
 
 createButton(MainTab, "Move All Down ↓", function()
-    for _, part in pairs(parts) do
+    for _, part in pairs(parts or {}) do
         if part.Parent then
             part.Position = part.Position + Vector3.new(0, -10, 0)
             part.Velocity = Vector3.new(0, 0, 0)
@@ -555,7 +555,7 @@ end)
 
 createButton(MainTab, "Move All Left ←", function()
     local rightVector = getPlayerDirections()
-    for _, part in pairs(parts) do
+    for _, part in pairs(parts or {}) do
         if part.Parent then
             part.Position = part.Position - rightVector * 10
             part.Velocity = Vector3.new(0, 0, 0)
@@ -565,7 +565,7 @@ end)
 
 createButton(MainTab, "Move All Right →", function()
     local rightVector = getPlayerDirections()
-    for _, part in pairs(parts) do
+    for _, part in pairs(parts or {}) do
         if part.Parent then
             part.Position = part.Position + rightVector * 10
             part.Velocity = Vector3.new(0, 0, 0)
