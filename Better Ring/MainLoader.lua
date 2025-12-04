@@ -1,3 +1,28 @@
+-- Check if script already running and destroy old instance
+if _G.SuperRingPartsV7 then
+    if _G.SuperRingPartsV7.GUI then
+        _G.SuperRingPartsV7.GUI:Destroy()
+    end
+    if _G.SuperRingPartsV7.Connections then
+        for _, conn in pairs(_G.SuperRingPartsV7.Connections) do
+            conn:Disconnect()
+        end
+    end
+    if _G.SuperRingPartsV7.Parts then
+        for _, part in pairs(_G.SuperRingPartsV7.Parts) do
+            if part and part.Parent then
+                part.Velocity = Vector3.new(0, 0, 0)
+            end
+        end
+    end
+end
+
+_G.SuperRingPartsV7 = {
+    Connections = {},
+    Parts = {},
+    GUI = nil
+}
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -13,9 +38,10 @@ local config = {
     includeAnchored = false,
     tornadoEnabled = false,
     flingPlayers = false,
-    flingMode = "default", -- default, nearest_player, nearest_object
+    flingMode = "default",
     flingPower = 500,
-    autoDuplicate = 0 -- 0 = off, 1 = 1x, 2 = 2x, etc.
+    autoDuplicate = 0,
+    flingTarget = "all" -- "all" or "single"
 }
 
 -- Create GUI
@@ -24,6 +50,7 @@ ScreenGui.Name = "SuperRingPartsV7"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+_G.SuperRingPartsV7.GUI = ScreenGui
 
 -- Main Frame
 local MainFrame = Instance.new("Frame")
@@ -270,11 +297,12 @@ local function createSlider(parent, text, max, default, callback)
         dragging = true
     end)
     
-    UserInputService.InputEnded:Connect(function(input)
+    local conn1 = UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
+    table.insert(_G.SuperRingPartsV7.Connections, conn1)
     
     SliderButton.MouseMoved:Connect(function(x, y)
         if dragging then
@@ -400,7 +428,6 @@ local function createDropdown(parent, text, options, default, callback)
         end
     end)
     
-    -- Close dropdown when clicking outside
     local function closeDropdown(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 and DropList.Visible then
             local mousePos = UserInputService:GetMouseLocation()
@@ -418,7 +445,8 @@ local function createDropdown(parent, text, options, default, callback)
         end
     end
     
-    UserInputService.InputBegan:Connect(closeDropdown)
+    local conn2 = UserInputService.InputBegan:Connect(closeDropdown)
+    table.insert(_G.SuperRingPartsV7.Connections, conn2)
 end
 
 -- Main Tab Content
@@ -448,11 +476,22 @@ createToggle(MainTab, "Fling Players", function(state)
     end
 end)
 
-createButton(MainTab, "Remove All Moving Objects", function()
-    for _, part in pairs(parts or {}) do
-        part:Destroy()
+-- Dropdown untuk memilih target object (Single Object atau All Objects)
+createDropdown(MainTab, "Fling Target", {"Single Object", "All Objects"}, "All Objects", function(value)
+    if value == "Single Object" then
+        config.flingTarget = "single"
+    else
+        config.flingTarget = "all"
     end
-    parts = {}
+end)
+
+createButton(MainTab, "Remove All Moving Objects", function()
+    for _, part in pairs(_G.SuperRingPartsV7.Parts or {}) do
+        if part and part.Parent then
+            part:Destroy()
+        end
+    end
+    _G.SuperRingPartsV7.Parts = {}
 end)
 
 local removeMode = false
@@ -465,12 +504,29 @@ createToggle(MainTab, "Select Mode (Click to Select)", function(state)
     selectMode = state
 end)
 
+local selectedPart = nil
+local selectedHighlight = nil
+
 local mouse = LocalPlayer:GetMouse()
-mouse.Button1Down:Connect(function()
+local conn3 = mouse.Button1Down:Connect(function()
     if selectMode then
         local target = mouse.Target
-        if target and table.find(parts, target) then
+        if target and table.find(_G.SuperRingPartsV7.Parts, target) then
             selectedPart = target
+            
+            -- Remove old highlight
+            if selectedHighlight then
+                selectedHighlight:Destroy()
+            end
+            
+            -- Add new highlight
+            selectedHighlight = Instance.new("Highlight")
+            selectedHighlight.FillColor = Color3.fromRGB(0, 255, 0)
+            selectedHighlight.OutlineColor = Color3.fromRGB(255, 255, 0)
+            selectedHighlight.FillTransparency = 0.5
+            selectedHighlight.OutlineTransparency = 0
+            selectedHighlight.Parent = target
+            
             game.StarterGui:SetCore("SendNotification", {
                 Title = "Selected",
                 Text = target.Name,
@@ -479,17 +535,20 @@ mouse.Button1Down:Connect(function()
         end
     elseif removeMode then
         local target = mouse.Target
-        if target and table.find(parts, target) then
+        if target and table.find(_G.SuperRingPartsV7.Parts, target) then
             removePart(target)
             target:Destroy()
         end
     end
 end)
-
-local selectedPart = nil
+table.insert(_G.SuperRingPartsV7.Connections, conn3)
 
 createButton(MainTab, "Deselect", function()
     selectedPart = nil
+    if selectedHighlight then
+        selectedHighlight:Destroy()
+        selectedHighlight = nil
+    end
     game.StarterGui:SetCore("SendNotification", {
         Title = "Deselected",
         Text = "No object selected",
@@ -536,7 +595,7 @@ createButton(MainTab, "Move Selected Right →", function()
 end)
 
 createButton(MainTab, "Move All Up ↑", function()
-    for _, part in pairs(parts or {}) do
+    for _, part in pairs(_G.SuperRingPartsV7.Parts or {}) do
         if part.Parent then
             part.Position = part.Position + Vector3.new(0, 10, 0)
             part.Velocity = Vector3.new(0, 0, 0)
@@ -545,7 +604,7 @@ createButton(MainTab, "Move All Up ↑", function()
 end)
 
 createButton(MainTab, "Move All Down ↓", function()
-    for _, part in pairs(parts or {}) do
+    for _, part in pairs(_G.SuperRingPartsV7.Parts or {}) do
         if part.Parent then
             part.Position = part.Position + Vector3.new(0, -10, 0)
             part.Velocity = Vector3.new(0, 0, 0)
@@ -555,7 +614,7 @@ end)
 
 createButton(MainTab, "Move All Left ←", function()
     local rightVector = getPlayerDirections()
-    for _, part in pairs(parts or {}) do
+    for _, part in pairs(_G.SuperRingPartsV7.Parts or {}) do
         if part.Parent then
             part.Position = part.Position - rightVector * 10
             part.Velocity = Vector3.new(0, 0, 0)
@@ -565,7 +624,7 @@ end)
 
 createButton(MainTab, "Move All Right →", function()
     local rightVector = getPlayerDirections()
-    for _, part in pairs(parts or {}) do
+    for _, part in pairs(_G.SuperRingPartsV7.Parts or {}) do
         if part.Parent then
             part.Position = part.Position + rightVector * 10
             part.Velocity = Vector3.new(0, 0, 0)
@@ -617,35 +676,300 @@ createButton(SettingsTab, "Reset to Default", function()
 end)
 
 -- Extras Tab Content
-createButton(ExtrasTab, "Fly GUI", function()
-    loadstring(game:HttpGet('https://pastebin.com/raw/YSL3xKYU'))()
+
+-- Fly Feature
+local flyEnabled = false
+local flySpeed = 50
+local flyConnection = nil
+
+createToggle(ExtrasTab, "Fly", function(state)
+    flyEnabled = state
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    
+    if state and hrp then
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bodyVelocity.Parent = hrp
+        bodyVelocity.Name = "FlyVelocity"
+        
+        local bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        bodyGyro.P = 9e4
+        bodyGyro.Parent = hrp
+        bodyGyro.Name = "FlyGyro"
+        
+        flyConnection = RunService.Heartbeat:Connect(function()
+            if not flyEnabled then return end
+            
+            local camera = workspace.CurrentCamera
+            local moveDirection = Vector3.new(0, 0, 0)
+            
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                moveDirection = moveDirection + camera.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                moveDirection = moveDirection - camera.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                moveDirection = moveDirection - camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                moveDirection = moveDirection + camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                moveDirection = moveDirection + Vector3.new(0, 1, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                moveDirection = moveDirection - Vector3.new(0, 1, 0)
+            end
+            
+            if bodyVelocity and bodyVelocity.Parent then
+                bodyVelocity.Velocity = moveDirection.Unit * flySpeed
+            end
+            if bodyGyro and bodyGyro.Parent then
+                bodyGyro.CFrame = camera.CFrame
+            end
+        end)
+        
+        if humanoid then
+            humanoid.PlatformStand = true
+        end
+    else
+        if flyConnection then
+            flyConnection:Disconnect()
+            flyConnection = nil
+        end
+        
+        if hrp then
+            local fv = hrp:FindFirstChild("FlyVelocity")
+            local fg = hrp:FindFirstChild("FlyGyro")
+            if fv then fv:Destroy() end
+            if fg then fg:Destroy() end
+        end
+        
+        if humanoid then
+            humanoid.PlatformStand = false
+        end
+    end
 end)
 
-createButton(ExtrasTab, "Noclip", function()
-    local Noclip = nil
-    local Clip = nil
+createSlider(ExtrasTab, "Fly Speed", 200, flySpeed, function(value)
+    flySpeed = value
+end)
+
+-- Noclip Feature
+local noclipEnabled = false
+local noclipConnection = nil
+
+createToggle(ExtrasTab, "Noclip", function(state)
+    noclipEnabled = state
     
-    function noclip()
-        Clip = false
-        local function Nocl()
-            if Clip == false and LocalPlayer.Character ~= nil then
-                for _,v in pairs(LocalPlayer.Character:GetDescendants()) do
-                    if v:IsA('BasePart') and v.CanCollide then
-                        v.CanCollide = false
+    if state then
+        noclipConnection = RunService.Stepped:Connect(function()
+            if not noclipEnabled then return end
+            
+            local character = LocalPlayer.Character
+            if character then
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
                     end
                 end
             end
-            wait(0.21)
+        end)
+        table.insert(_G.SuperRingPartsV7.Connections, noclipConnection)
+    else
+        if noclipConnection then
+            noclipConnection:Disconnect()
         end
-        Noclip = RunService.Stepped:Connect(Nocl)
+        
+        local character = LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
     end
-    noclip()
 end)
 
-createButton(ExtrasTab, "ESP", function()
-    loadstring(game:HttpGet('https://pastebin.com/raw/UcWxrfh5'))()
+-- ESP Feature with Health
+local espEnabled = false
+local espConnections = {}
+local espObjects = {}
+
+local function createESP(player)
+    if player == LocalPlayer then return end
+    
+    local character = player.Character
+    if not character then return end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not hrp then return end
+    
+    -- Remove old ESP
+    if espObjects[player] then
+        for _, obj in pairs(espObjects[player]) do
+            if obj then obj:Destroy() end
+        end
+    end
+    
+    espObjects[player] = {}
+    
+    -- Create Highlight
+    local highlight = Instance.new("Highlight")
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Parent = character
+    table.insert(espObjects[player], highlight)
+    
+    -- Create BillboardGui for name and health
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_Billboard"
+    billboard.Adornee = hrp
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = hrp
+    table.insert(espObjects[player], billboard)
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 16
+    nameLabel.Parent = billboard
+    
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    healthLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    healthLabel.TextStrokeTransparency = 0
+    healthLabel.Font = Enum.Font.Gotham
+    healthLabel.TextSize = 14
+    healthLabel.Parent = billboard
+    
+    -- Update health
+    local function updateHealth()
+        if humanoid then
+            local health = math.floor(humanoid.Health)
+            local maxHealth = math.floor(humanoid.MaxHealth)
+            healthLabel.Text = health .. "/" .. maxHealth
+            
+            -- Color based on health percentage
+            local healthPercent = health / maxHealth
+            if healthPercent > 0.5 then
+                healthLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                highlight.OutlineColor = Color3.fromRGB(0, 200, 0)
+            elseif healthPercent > 0.25 then
+                healthLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+                highlight.FillColor = Color3.fromRGB(255, 255, 0)
+                highlight.OutlineColor = Color3.fromRGB(200, 200, 0)
+            else
+                healthLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                highlight.OutlineColor = Color3.fromRGB(200, 0, 0)
+            end
+        end
+    end
+    
+    updateHealth()
+    
+    if humanoid then
+        local healthConn = humanoid.HealthChanged:Connect(updateHealth)
+        table.insert(espConnections, healthConn)
+    end
+    
+    -- Create Distance Label
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Size = UDim2.new(1, 0, 0.3, 0)
+    distanceLabel.Position = UDim2.new(0, 0, 1, 0)
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    distanceLabel.TextStrokeTransparency = 0
+    distanceLabel.Font = Enum.Font.Gotham
+    distanceLabel.TextSize = 12
+    distanceLabel.Parent = billboard
+    
+    -- Update distance
+    local distConn = RunService.Heartbeat:Connect(function()
+        if not espEnabled then return end
+        local myChar = LocalPlayer.Character
+        local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        if myHrp and hrp and hrp.Parent then
+            local dist = math.floor((myHrp.Position - hrp.Position).Magnitude)
+            distanceLabel.Text = dist .. " studs"
+        end
+    end)
+    table.insert(espConnections, distConn)
+end
+
+local function removeESP(player)
+    if espObjects[player] then
+        for _, obj in pairs(espObjects[player]) do
+            if obj then obj:Destroy() end
+        end
+        espObjects[player] = nil
+    end
+end
+
+createToggle(ExtrasTab, "ESP (Player Wallhack)", function(state)
+    espEnabled = state
+    
+    if state then
+        -- Create ESP for all players
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character then
+                createESP(player)
+            end
+        end
+        
+        -- Handle new players
+        local conn1 = Players.PlayerAdded:Connect(function(player)
+            local conn2 = player.CharacterAdded:Connect(function()
+                if espEnabled then
+                    createESP(player)
+                end
+            end)
+            table.insert(espConnections, conn2)
+        end)
+        table.insert(espConnections, conn1)
+        
+        -- Handle character respawns
+        for _, player in pairs(Players:GetPlayers()) do
+            local conn3 = player.CharacterAdded:Connect(function()
+                if espEnabled then
+                    wait(0.5)
+                    createESP(player)
+                end
+            end)
+            table.insert(espConnections, conn3)
+        end
+    else
+        -- Remove all ESP
+        for _, player in pairs(Players:GetPlayers()) do
+            removeESP(player)
+        end
+        
+        -- Disconnect all ESP connections
+        for _, conn in pairs(espConnections) do
+            if conn then conn:Disconnect() end
+        end
+        espConnections = {}
+    end
 end)
 
+-- Infinite Yield
 createButton(ExtrasTab, "Infinite Yield", function()
     loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
 end)
@@ -696,16 +1020,17 @@ TitleBar.InputChanged:Connect(function(input)
     end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
+local conn4 = UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
+table.insert(_G.SuperRingPartsV7.Connections, conn4)
 
 -- Tornado System
 local Workspace = game:GetService("Workspace")
-local parts = {}
+local parts = _G.SuperRingPartsV7.Parts
 local anchoredParts = {}
 
 local function handleAnchoredPart(part)
@@ -772,7 +1097,7 @@ local function addPart(part)
     end
 end
 
-local function removePart(part)
+function removePart(part)
     local index = table.find(parts, part)
     if index then
         table.remove(parts, index)
@@ -790,8 +1115,10 @@ for _, part in pairs(workspace:GetDescendants()) do
     addPart(part)
 end
 
-workspace.DescendantAdded:Connect(addPart)
-workspace.DescendantRemoving:Connect(removePart)
+local conn5 = workspace.DescendantAdded:Connect(addPart)
+local conn6 = workspace.DescendantRemoving:Connect(removePart)
+table.insert(_G.SuperRingPartsV7.Connections, conn5)
+table.insert(_G.SuperRingPartsV7.Connections, conn6)
 
 local function duplicatePart(part, times)
     for i = 1, times do
@@ -802,7 +1129,7 @@ local function duplicatePart(part, times)
     end
 end
 
-RunService.Heartbeat:Connect(function()
+local conn7 = RunService.Heartbeat:Connect(function()
     if not config.tornadoEnabled then return end
     
     local humanoidRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -825,7 +1152,15 @@ RunService.Heartbeat:Connect(function()
             end
         end
         
-        for _, part in pairs(parts) do
+        -- Determine which parts to move
+        local partsToMove = {}
+        if config.flingTarget == "single" and selectedPart and selectedPart.Parent then
+            table.insert(partsToMove, selectedPart)
+        else
+            partsToMove = parts
+        end
+        
+        for _, part in pairs(partsToMove) do
             if part.Parent then
                 if part.Anchored then
                     handleAnchoredPart(part)
@@ -894,16 +1229,17 @@ RunService.Heartbeat:Connect(function()
                 end
                 
                 -- Auto duplicate
-                if config.autoDuplicate > 0 and math.random(1, 100) < 5 then -- Random chance to duplicate
+                if config.autoDuplicate > 0 and math.random(1, 100) < 5 then
                     duplicatePart(part, config.autoDuplicate)
                 end
             end
         end
     end
 end)
+table.insert(_G.SuperRingPartsV7.Connections, conn7)
 
 game.StarterGui:SetCore("SendNotification", {
     Title = "Super Ring Parts V7",
-    Text = "Made by Me, Credit by lukas",
+    Text = "Loaded Successfully!",
     Duration = 5
 })
