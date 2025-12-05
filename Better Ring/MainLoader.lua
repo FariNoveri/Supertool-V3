@@ -297,8 +297,18 @@ local function createSlider(parent, text, max, default, callback)
     
     local dragging = false
     
+    local function updateSlider()
+        local mousePos = UserInputService:GetMouseLocation()
+        local pos = math.clamp((mousePos.X - SliderBack.AbsolutePosition.X) / SliderBack.AbsoluteSize.X, 0, 1)
+        local value = math.floor(pos * max)
+        SliderFill.Size = UDim2.new(pos, 0, 1, 0)
+        Label.Text = text .. ": " .. value
+        callback(value)
+    end
+    
     SliderButton.MouseButton1Down:Connect(function()
         dragging = true
+        updateSlider()
     end)
     
     local conn1 = UserInputService.InputEnded:Connect(function(input)
@@ -308,15 +318,12 @@ local function createSlider(parent, text, max, default, callback)
     end)
     table.insert(_G.SuperRingPartsV7.Connections, conn1)
     
-    SliderButton.MouseMoved:Connect(function(x, y)
-        if dragging then
-            local pos = math.clamp((x - SliderBack.AbsolutePosition.X) / SliderBack.AbsoluteSize.X, 0, 1)
-            local value = math.floor(pos * max)
-            SliderFill.Size = UDim2.new(pos, 0, 1, 0)
-            Label.Text = text .. ": " .. value
-            callback(value)
+    local conn2 = UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider()
         end
     end)
+    table.insert(_G.SuperRingPartsV7.Connections, conn2)
 end
 
 local function createButton(parent, text, callback)
@@ -1259,4 +1266,4 @@ game.StarterGui:SetCore("SendNotification", {
     Title = "Super Ring Parts V7",
     Text = "Loaded Successfully!",
     Duration = 5
-})  
+})
