@@ -41,7 +41,9 @@ local config = {
     flingMode = "default",
     flingPower = 500,
     autoDuplicate = 0,
-    flingTarget = "all" -- "all" or "single"
+    flingTarget = "all",
+    followMode = "rotate",
+    stealObjects = false
 }
 
 -- Create GUI
@@ -239,6 +241,8 @@ local function createToggle(parent, text, callback)
             TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(0, 3, 0.5, -9.5)}):Play()
         end
     end)
+    
+    return ToggleButton
 end
 
 local function createSlider(parent, text, max, default, callback)
@@ -476,13 +480,27 @@ createToggle(MainTab, "Fling Players", function(state)
     end
 end)
 
--- Dropdown untuk memilih target object (Single Object atau All Objects)
-createDropdown(MainTab, "Fling Target", {"Single Object", "All Objects"}, "All Objects", function(value)
-    if value == "Single Object" then
-        config.flingTarget = "single"
-    else
-        config.flingTarget = "all"
+createToggle(MainTab, "Steal Other Players Objects", function(state)
+    config.stealObjects = state
+    if state then
+        game.StarterGui:SetCore("SendNotification", {
+            Title = "Steal Mode",
+            Text = "Stealing other players tornado objects!",
+            Duration = 3
+        })
     end
+end)
+
+createDropdown(MainTab, "Follow Mode", {"Rotate", "Behind", "Above", "Right", "Left", "Front"}, "Rotate", function(value)
+    local modes = {
+        ["Rotate"] = "rotate",
+        ["Behind"] = "behind",
+        ["Above"] = "above",
+        ["Right"] = "right",
+        ["Left"] = "left",
+        ["Front"] = "front"
+    }
+    config.followMode = modes[value]
 end)
 
 createButton(MainTab, "Remove All Moving Objects", function()
@@ -492,144 +510,6 @@ createButton(MainTab, "Remove All Moving Objects", function()
         end
     end
     _G.SuperRingPartsV7.Parts = {}
-end)
-
-local removeMode = false
-createToggle(MainTab, "Remove Mode (Click to Remove)", function(state)
-    removeMode = state
-end)
-
-local selectMode = false
-createToggle(MainTab, "Select Mode (Click to Select)", function(state)
-    selectMode = state
-end)
-
-local selectedPart = nil
-local selectedHighlight = nil
-
-local mouse = LocalPlayer:GetMouse()
-local conn3 = mouse.Button1Down:Connect(function()
-    if selectMode then
-        local target = mouse.Target
-        if target and table.find(_G.SuperRingPartsV7.Parts, target) then
-            selectedPart = target
-            
-            -- Remove old highlight
-            if selectedHighlight then
-                selectedHighlight:Destroy()
-            end
-            
-            -- Add new highlight
-            selectedHighlight = Instance.new("Highlight")
-            selectedHighlight.FillColor = Color3.fromRGB(0, 255, 0)
-            selectedHighlight.OutlineColor = Color3.fromRGB(255, 255, 0)
-            selectedHighlight.FillTransparency = 0.5
-            selectedHighlight.OutlineTransparency = 0
-            selectedHighlight.Parent = target
-            
-            game.StarterGui:SetCore("SendNotification", {
-                Title = "Selected",
-                Text = target.Name,
-                Duration = 3
-            })
-        end
-    elseif removeMode then
-        local target = mouse.Target
-        if target and table.find(_G.SuperRingPartsV7.Parts, target) then
-            removePart(target)
-            target:Destroy()
-        end
-    end
-end)
-table.insert(_G.SuperRingPartsV7.Connections, conn3)
-
-createButton(MainTab, "Deselect", function()
-    selectedPart = nil
-    if selectedHighlight then
-        selectedHighlight:Destroy()
-        selectedHighlight = nil
-    end
-    game.StarterGui:SetCore("SendNotification", {
-        Title = "Deselected",
-        Text = "No object selected",
-        Duration = 3
-    })
-end)
-
-createButton(MainTab, "Move Selected Up ↑", function()
-    if selectedPart and selectedPart.Parent then
-        selectedPart.Position = selectedPart.Position + Vector3.new(0, 10, 0)
-        selectedPart.Velocity = Vector3.new(0, 0, 0)
-    end
-end)
-
-createButton(MainTab, "Move Selected Down ↓", function()
-    if selectedPart and selectedPart.Parent then
-        selectedPart.Position = selectedPart.Position + Vector3.new(0, -10, 0)
-        selectedPart.Velocity = Vector3.new(0, 0, 0)
-    end
-end)
-
-local function getPlayerDirections()
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        return hrp.CFrame.RightVector
-    end
-    return Vector3.new(1, 0, 0)
-end
-
-createButton(MainTab, "Move Selected Left ←", function()
-    if selectedPart and selectedPart.Parent then
-        local rightVector = getPlayerDirections()
-        selectedPart.Position = selectedPart.Position - rightVector * 10
-        selectedPart.Velocity = Vector3.new(0, 0, 0)
-    end
-end)
-
-createButton(MainTab, "Move Selected Right →", function()
-    if selectedPart and selectedPart.Parent then
-        local rightVector = getPlayerDirections()
-        selectedPart.Position = selectedPart.Position + rightVector * 10
-        selectedPart.Velocity = Vector3.new(0, 0, 0)
-    end
-end)
-
-createButton(MainTab, "Move All Up ↑", function()
-    for _, part in pairs(_G.SuperRingPartsV7.Parts or {}) do
-        if part.Parent then
-            part.Position = part.Position + Vector3.new(0, 10, 0)
-            part.Velocity = Vector3.new(0, 0, 0)
-        end
-    end
-end)
-
-createButton(MainTab, "Move All Down ↓", function()
-    for _, part in pairs(_G.SuperRingPartsV7.Parts or {}) do
-        if part.Parent then
-            part.Position = part.Position + Vector3.new(0, -10, 0)
-            part.Velocity = Vector3.new(0, 0, 0)
-        end
-    end
-end)
-
-createButton(MainTab, "Move All Left ←", function()
-    local rightVector = getPlayerDirections()
-    for _, part in pairs(_G.SuperRingPartsV7.Parts or {}) do
-        if part.Parent then
-            part.Position = part.Position - rightVector * 10
-            part.Velocity = Vector3.new(0, 0, 0)
-        end
-    end
-end)
-
-createButton(MainTab, "Move All Right →", function()
-    local rightVector = getPlayerDirections()
-    for _, part in pairs(_G.SuperRingPartsV7.Parts or {}) do
-        if part.Parent then
-            part.Position = part.Position + rightVector * 10
-            part.Velocity = Vector3.new(0, 0, 0)
-        end
-    end
 end)
 
 -- Settings Tab Content
@@ -653,8 +533,13 @@ createSlider(SettingsTab, "Fling Power", 2000, config.flingPower, function(value
     config.flingPower = value
 end)
 
-createDropdown(SettingsTab, "Fling Mode", {"default", "nearest_player", "nearest_object"}, config.flingMode, function(value)
-    config.flingMode = value
+createDropdown(SettingsTab, "Fling Mode", {"Default", "Nearest Player", "Nearest Object"}, "Default", function(value)
+    local modes = {
+        ["Default"] = "default",
+        ["Nearest Player"] = "nearest_player",
+        ["Nearest Object"] = "nearest_object"
+    }
+    config.flingMode = modes[value]
 end)
 
 createSlider(SettingsTab, "Auto Duplicate", 5, config.autoDuplicate, function(value)
@@ -667,6 +552,7 @@ createButton(SettingsTab, "Reset to Default", function()
     config.rotationSpeed = 10
     config.attractionStrength = 1000
     config.flingMode = "default"
+    config.flingPower = 500
     config.autoDuplicate = 0
     game.StarterGui:SetCore("SendNotification", {
         Title = "Settings",
@@ -677,7 +563,7 @@ end)
 
 -- Extras Tab Content
 
--- Fly Feature
+-- Fly Feature (Infinite Yield Style)
 local flyEnabled = false
 local flySpeed = 50
 local flyConnection = nil
@@ -702,62 +588,127 @@ createToggle(ExtrasTab, "Fly", function(state)
         bodyGyro.Name = "FlyGyro"
         
         flyConnection = RunService.Heartbeat:Connect(function()
-            if not flyEnabled then return end
+            if not flyEnabled or not hrp or not hrp.Parent then return end
             
             local camera = workspace.CurrentCamera
-            local moveDirection = Vector3.new(0, 0, 0)
+            local flyVelocity = Vector3.new(0, 0, 0)
             
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                moveDirection = moveDirection + camera.CFrame.LookVector
+                flyVelocity = flyVelocity + (camera.CFrame.LookVector)
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                moveDirection = moveDirection - camera.CFrame.LookVector
+                flyVelocity = flyVelocity - (camera.CFrame.LookVector)
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                moveDirection = moveDirection - camera.CFrame.RightVector
+                flyVelocity = flyVelocity - (camera.CFrame.RightVector)
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                moveDirection = moveDirection + camera.CFrame.RightVector
+                flyVelocity = flyVelocity + (camera.CFrame.RightVector)
             end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                moveDirection = moveDirection + Vector3.new(0, 1, 0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.E) or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                flyVelocity = flyVelocity + Vector3.new(0, 1, 0)
             end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                moveDirection = moveDirection - Vector3.new(0, 1, 0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.Q) or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                flyVelocity = flyVelocity - Vector3.new(0, 1, 0)
             end
             
-            if bodyVelocity and bodyVelocity.Parent then
-                bodyVelocity.Velocity = moveDirection.Unit * flySpeed
+            local bv = hrp:FindFirstChild("FlyVelocity")
+            local bg = hrp:FindFirstChild("FlyGyro")
+            
+            if bv then
+                bv.Velocity = flyVelocity.Unit * flySpeed
             end
-            if bodyGyro and bodyGyro.Parent then
-                bodyGyro.CFrame = camera.CFrame
+            if bg then
+                bg.CFrame = camera.CFrame
             end
         end)
-        
-        if humanoid then
-            humanoid.PlatformStand = true
-        end
+        table.insert(_G.SuperRingPartsV7.Connections, speedConnection)
     else
-        if flyConnection then
-            flyConnection:Disconnect()
-            flyConnection = nil
+        if speedConnection then
+            speedConnection:Disconnect()
+            speedConnection = nil
         end
-        
-        if hrp then
-            local fv = hrp:FindFirstChild("FlyVelocity")
-            local fg = hrp:FindFirstChild("FlyGyro")
-            if fv then fv:Destroy() end
-            if fg then fg:Destroy() end
-        end
-        
         if humanoid then
-            humanoid.PlatformStand = false
+            humanoid.WalkSpeed = 16
         end
     end
 end)
 
-createSlider(ExtrasTab, "Fly Speed", 200, flySpeed, function(value)
-    flySpeed = value
+createSlider(ExtrasTab, "Speed Value", 500, speedHackValue, function(value)
+    speedHackValue = value
+    if speedHackEnabled then
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = value
+        end
+    end
+end)
+
+-- Jump Hack
+local jumpHackEnabled = false
+local jumpHackValue = 50
+local jumpConnection = nil
+
+createToggle(ExtrasTab, "Jump Hack", function(state)
+    jumpHackEnabled = state
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    
+    if state and humanoid then
+        humanoid.JumpPower = jumpHackValue
+        jumpConnection = humanoid:GetPropertyChangedSignal("JumpPower"):Connect(function()
+            if jumpHackEnabled then
+                humanoid.JumpPower = jumpHackValue
+            end
+        end)
+        table.insert(_G.SuperRingPartsV7.Connections, jumpConnection)
+    else
+        if jumpConnection then
+            jumpConnection:Disconnect()
+            jumpConnection = nil
+        end
+        if humanoid then
+            humanoid.JumpPower = 50
+        end
+    end
+end)
+
+createSlider(ExtrasTab, "Jump Power", 500, jumpHackValue, function(value)
+    jumpHackValue = value
+    if jumpHackEnabled then
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.JumpPower = value
+        end
+    end
+end)
+
+-- Infinite Jump
+local infiniteJumpEnabled = false
+local infiniteJumpConnection = nil
+
+createToggle(ExtrasTab, "Infinite Jump", function(state)
+    infiniteJumpEnabled = state
+    
+    if state then
+        infiniteJumpConnection = UserInputService.JumpRequest:Connect(function()
+            if infiniteJumpEnabled then
+                local character = LocalPlayer.Character
+                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
+        end)
+        table.insert(_G.SuperRingPartsV7.Connections, infiniteJumpConnection)
+    else
+        if infiniteJumpConnection then
+            infiniteJumpConnection:Disconnect()
+            infiniteJumpConnection = nil
+        end
+    end
 end)
 
 -- Noclip Feature
@@ -1129,12 +1080,39 @@ local function duplicatePart(part, times)
     end
 end
 
+-- Steal objects from other players
+local function stealObjects()
+    if not config.stealObjects then return end
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj:FindFirstChild("BodyVelocity") then
+            local isPlayerPart = false
+            for _, player in pairs(Players:GetPlayers()) do
+                if player.Character and obj:IsDescendantOf(player.Character) then
+                    isPlayerPart = true
+                    break
+                end
+            end
+            
+            if not isPlayerPart and not table.find(parts, obj) then
+                addPart(obj)
+            end
+        end
+    end
+end
+
 local conn7 = RunService.Heartbeat:Connect(function()
     if not config.tornadoEnabled then return end
     
     local humanoidRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if humanoidRootPart then
         local tornadoCenter = humanoidRootPart.Position
+        local hrpCFrame = humanoidRootPart.CFrame
+        
+        -- Steal objects
+        if config.stealObjects then
+            stealObjects()
+        end
         
         -- Get all players and objects for fling modes
         local targetPlayers = {}
@@ -1152,15 +1130,7 @@ local conn7 = RunService.Heartbeat:Connect(function()
             end
         end
         
-        -- Determine which parts to move
-        local partsToMove = {}
-        if config.flingTarget == "single" and selectedPart and selectedPart.Parent then
-            table.insert(partsToMove, selectedPart)
-        else
-            partsToMove = parts
-        end
-        
-        for _, part in pairs(partsToMove) do
+        for _, part in pairs(parts) do
             if part.Parent then
                 if part.Anchored then
                     handleAnchoredPart(part)
@@ -1171,6 +1141,7 @@ local conn7 = RunService.Heartbeat:Connect(function()
                 
                 local pos = part.Position
                 local target = nil
+                local targetPos
                 
                 -- Fling mode
                 if config.flingPlayers then
@@ -1201,20 +1172,66 @@ local conn7 = RunService.Heartbeat:Connect(function()
                     end
                 end
                 
-                local targetPos
                 if target then
                     targetPos = target.Position
                 else
-                    -- Normal tornado mode
-                    local distance = (Vector3.new(pos.X, tornadoCenter.Y, pos.Z) - tornadoCenter).Magnitude
-                    local angle = math.atan2(pos.Z - tornadoCenter.Z, pos.X - tornadoCenter.X)
-                    local newAngle = angle + math.rad(config.rotationSpeed)
-                    
-                    targetPos = Vector3.new(
-                        tornadoCenter.X + math.cos(newAngle) * math.min(config.radius, distance),
-                        tornadoCenter.Y + (config.height * (math.abs(math.sin((pos.Y - tornadoCenter.Y) / config.height)))),
-                        tornadoCenter.Z + math.sin(newAngle) * math.min(config.radius, distance)
-                    )
+                    -- Follow modes
+                    if config.followMode == "rotate" then
+                        -- Normal rotating tornado
+                        local distance = (Vector3.new(pos.X, tornadoCenter.Y, pos.Z) - tornadoCenter).Magnitude
+                        local angle = math.atan2(pos.Z - tornadoCenter.Z, pos.X - tornadoCenter.X)
+                        local newAngle = angle + math.rad(config.rotationSpeed)
+                        
+                        targetPos = Vector3.new(
+                            tornadoCenter.X + math.cos(newAngle) * math.min(config.radius, distance),
+                            tornadoCenter.Y + (config.height * (math.abs(math.sin((pos.Y - tornadoCenter.Y) / config.height)))),
+                            tornadoCenter.Z + math.sin(newAngle) * math.min(config.radius, distance)
+                        )
+                    elseif config.followMode == "behind" then
+                        -- Follow from behind
+                        local lookVector = hrpCFrame.LookVector
+                        targetPos = tornadoCenter - (lookVector * config.radius)
+                        targetPos = targetPos + Vector3.new(
+                            math.sin((pos.X + pos.Z) * 0.5) * 10,
+                            (pos.Y - tornadoCenter.Y) % config.height,
+                            math.cos((pos.X + pos.Z) * 0.5) * 10
+                        )
+                    elseif config.followMode == "above" then
+                        -- Follow from above
+                        targetPos = tornadoCenter + Vector3.new(0, config.radius, 0)
+                        targetPos = targetPos + Vector3.new(
+                            math.sin((pos.X + pos.Z) * 0.5) * 20,
+                            0,
+                            math.cos((pos.X + pos.Z) * 0.5) * 20
+                        )
+                    elseif config.followMode == "right" then
+                        -- Follow from right
+                        local rightVector = hrpCFrame.RightVector
+                        targetPos = tornadoCenter + (rightVector * config.radius)
+                        targetPos = targetPos + Vector3.new(
+                            math.sin((pos.Y + pos.Z) * 0.5) * 10,
+                            (pos.Y - tornadoCenter.Y) % config.height,
+                            math.cos((pos.Y + pos.Z) * 0.5) * 10
+                        )
+                    elseif config.followMode == "left" then
+                        -- Follow from left
+                        local rightVector = hrpCFrame.RightVector
+                        targetPos = tornadoCenter - (rightVector * config.radius)
+                        targetPos = targetPos + Vector3.new(
+                            math.sin((pos.Y + pos.Z) * 0.5) * 10,
+                            (pos.Y - tornadoCenter.Y) % config.height,
+                            math.cos((pos.Y + pos.Z) * 0.5) * 10
+                        )
+                    elseif config.followMode == "front" then
+                        -- Follow from front
+                        local lookVector = hrpCFrame.LookVector
+                        targetPos = tornadoCenter + (lookVector * config.radius)
+                        targetPos = targetPos + Vector3.new(
+                            math.sin((pos.X + pos.Z) * 0.5) * 10,
+                            (pos.Y - tornadoCenter.Y) % config.height,
+                            math.cos((pos.X + pos.Z) * 0.5) * 10
+                        )
+                    end
                 end
                 
                 if targetPos then
@@ -1242,4 +1259,4 @@ game.StarterGui:SetCore("SendNotification", {
     Title = "Super Ring Parts V7",
     Text = "Loaded Successfully!",
     Duration = 5
-})
+})  
