@@ -20,8 +20,8 @@ local EMOTES = {
 	
 	{name = "Dab", id = 3695297207, cat = "Meme"},
 	{name = "Take L", id = 3337966527, cat = "Meme"},
-	{name = "Default Dance", id = 3337966527, cat = "Meme"},
-	{name = "T-Pose", id = 3337966527, cat = "Meme"},
+	{name = "Default Dance", id = 3695333486, cat = "Meme"},  -- FIXED: ID yang benar
+	{name = "T-Pose", id = 3360686498, cat = "Meme"},  -- FIXED: ID yang benar
 }
 
 local ANIM_PACKS = {
@@ -44,7 +44,7 @@ local ANIM_PACKS = {
 		climb = 656114359
 	},
 	["Robot"] = {
-		walk = 616163682,
+		walk = 616168032,  -- FIXED
 		run = 616163682,
 		jump = 616161997,
 		idle = 616158929,
@@ -58,11 +58,11 @@ local ANIM_PACKS = {
 		jump = 845398858,
 		idle = 845397899,
 		fall = 845403127,
-		swim = 845403127,
+		swim = 845400046,  -- FIXED
 		climb = 845392038
 	},
 	["Zombie"] = {
-		walk = 616163682,
+		walk = 616168032,  -- FIXED
 		run = 616163682,
 		jump = 616161997,
 		idle = 616158929,
@@ -94,11 +94,11 @@ local ANIM_PACKS = {
 		jump = 750787460,
 		idle = 750781874,
 		fall = 750785693,
-		swim = 750784579,
+		swim = 750780242,  -- FIXED
 		climb = 750779899
 	},
 	["Werewolf"] = {
-		walk = 1083216690,
+		walk = 1083195517,  -- FIXED: walk beda dari run
 		run = 1083216690,
 		jump = 1083218792,
 		idle = 1083195517,
@@ -107,7 +107,7 @@ local ANIM_PACKS = {
 		climb = 1083182000
 	},
 	["Astronaut"] = {
-		walk = 891636393,
+		walk = 891621366,  -- FIXED
 		run = 891636393,
 		jump = 891627522,
 		idle = 891621366,
@@ -143,7 +143,7 @@ local ANIM_PACKS = {
 		climb = 782843869
 	},
 	["Vampire"] = {
-		walk = 1083462077,
+		walk = 1083445855,  -- FIXED
 		run = 1083462077,
 		jump = 1083455352,
 		idle = 1083445855,
@@ -456,7 +456,12 @@ end
 local function applyPack(pack, type)
 	local p = ANIM_PACKS[pack]
 	if not p then return end
-	local animate = character:WaitForChild("Animate")
+	
+	-- Stop semua animasi yang sedang berjalan
+	stopAll()
+	
+	local animate = character:FindFirstChild("Animate")
+	if not animate then return end
 	
 	if type == "all" then
 		if p.walk then animate.walk.WalkAnim.AnimationId = "rbxassetid://" .. p.walk end
@@ -481,6 +486,9 @@ local function applyPack(pack, type)
 		elseif type == "climb" and p.climb then animate.climb.ClimbAnim.AnimationId = "rbxassetid://" .. p.climb
 		end
 	end
+	
+	-- Reload humanoid untuk apply animasi baru
+	humanoid:ChangeState(Enum.HumanoidStateType.Landed)
 end
 
 local gui = Instance.new("ScreenGui")
@@ -626,11 +634,146 @@ local function clear()
 	end
 end
 
+local function addCustomEmote()
+	-- Create popup frame
+	local popup = Instance.new("Frame")
+	popup.Size = UDim2.new(0, 320, 0, 180)
+	popup.Position = UDim2.new(0.5, -160, 0.5, -90)
+	popup.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+	popup.BorderSizePixel = 0
+	popup.ZIndex = 10
+	popup.Parent = gui
+	
+	Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 10)
+	
+	local popTitle = Instance.new("TextLabel")
+	popTitle.Size = UDim2.new(1, -20, 0, 40)
+	popTitle.Position = UDim2.new(0, 10, 0, 10)
+	popTitle.BackgroundTransparency = 1
+	popTitle.Text = "Add Custom Emote"
+	popTitle.TextColor3 = Color3.fromRGB(240, 240, 245)
+	popTitle.TextSize = 16
+	popTitle.Font = Enum.Font.GothamBold
+	popTitle.TextXAlignment = Enum.TextXAlignment.Left
+	popTitle.Parent = popup
+	
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(1, -20, 0, 20)
+	nameLabel.Position = UDim2.new(0, 10, 0, 55)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = "Emote Name:"
+	nameLabel.TextColor3 = Color3.fromRGB(200, 200, 205)
+	nameLabel.TextSize = 13
+	nameLabel.Font = Enum.Font.Gotham
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Parent = popup
+	
+	local nameBox = Instance.new("TextBox")
+	nameBox.Size = UDim2.new(1, -20, 0, 32)
+	nameBox.Position = UDim2.new(0, 10, 0, 75)
+	nameBox.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+	nameBox.Text = ""
+	nameBox.PlaceholderText = "Enter name..."
+	nameBox.TextColor3 = Color3.fromRGB(230, 230, 235)
+	nameBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 125)
+	nameBox.TextSize = 14
+	nameBox.Font = Enum.Font.Gotham
+	nameBox.ClearTextOnFocus = false
+	nameBox.Parent = popup
+	
+	Instance.new("UICorner", nameBox).CornerRadius = UDim.new(0, 6)
+	
+	local idLabel = Instance.new("TextLabel")
+	idLabel.Size = UDim2.new(1, -20, 0, 20)
+	idLabel.Position = UDim2.new(0, 10, 0, 112)
+	idLabel.BackgroundTransparency = 1
+	idLabel.Text = "Animation ID or Link:"
+	idLabel.TextColor3 = Color3.fromRGB(200, 200, 205)
+	idLabel.TextSize = 13
+	idLabel.Font = Enum.Font.Gotham
+	idLabel.TextXAlignment = Enum.TextXAlignment.Left
+	idLabel.Parent = popup
+	
+	local idBox = Instance.new("TextBox")
+	idBox.Size = UDim2.new(1, -20, 0, 32)
+	idBox.Position = UDim2.new(0, 10, 0, 132)
+	idBox.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+	idBox.Text = ""
+	idBox.PlaceholderText = "ID or roblox.com/catalog/..."
+	idBox.TextColor3 = Color3.fromRGB(230, 230, 235)
+	idBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 125)
+	idBox.TextSize = 14
+	idBox.Font = Enum.Font.Gotham
+	idBox.ClearTextOnFocus = false
+	idBox.Parent = popup
+	
+	Instance.new("UICorner", idBox).CornerRadius = UDim.new(0, 6)
+	
+	local addBtn = Instance.new("TextButton")
+	addBtn.Size = UDim2.new(0.5, -15, 0, 35)
+	addBtn.Position = UDim2.new(0, 10, 1, -45)
+	addBtn.BackgroundColor3 = Color3.fromRGB(70, 150, 80)
+	addBtn.Text = "Add"
+	addBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	addBtn.TextSize = 15
+	addBtn.Font = Enum.Font.GothamBold
+	addBtn.Parent = popup
+	
+	Instance.new("UICorner", addBtn).CornerRadius = UDim.new(0, 6)
+	
+	local cancelBtn = Instance.new("TextButton")
+	cancelBtn.Size = UDim2.new(0.5, -15, 0, 35)
+	cancelBtn.Position = UDim2.new(0.5, 5, 1, -45)
+	cancelBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 60)
+	cancelBtn.Text = "Cancel"
+	cancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	cancelBtn.TextSize = 15
+	cancelBtn.Font = Enum.Font.GothamBold
+	cancelBtn.Parent = popup
+	
+	Instance.new("UICorner", cancelBtn).CornerRadius = UDim.new(0, 6)
+	
+	cancelBtn.MouseButton1Click:Connect(function()
+		popup:Destroy()
+	end)
+	
+	addBtn.MouseButton1Click:Connect(function()
+		local name = nameBox.Text
+		local idText = idBox.Text
+		
+		if name == "" or idText == "" then
+			return
+		end
+		
+		-- Extract ID from link or use directly
+		local animId = idText
+		if string.find(idText, "roblox.com") then
+			local id = string.match(idText, "catalog/(%d+)")
+			if id then
+				animId = id
+			end
+		end
+		
+		-- Convert to number
+		animId = tonumber(animId)
+		if not animId then
+			return
+		end
+		
+		-- Add to custom emotes
+		table.insert(EMOTES, {name = name, id = animId, cat = "Custom"})
+		
+		popup:Destroy()
+		showEmotes()
+	end)
+end
+
 local function showEmotes()
 	clear()
 	tab = "emotes"
 	
 	btn("Stop All", stopAll, Color3.fromRGB(180, 50, 60))
+	btn("➕ Add Custom Emote", addCustomEmote, Color3.fromRGB(80, 120, 200))
 	
 	local cats = {}
 	for _, e in ipairs(EMOTES) do
